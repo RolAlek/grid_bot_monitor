@@ -1,0 +1,94 @@
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum, StrEnum
+from uuid import UUID
+
+
+class GateStatus(StrEnum):
+    PASS = "pass"
+    CAUTION = "caution"
+    FAIL = "fail"
+
+
+class VerdictAction(StrEnum):
+    LAUNCH = "launch"
+    HOLD = "hold"
+    REVIEW = "review"
+
+
+class Gate(Enum):
+    REGIME_RANGE_FIT = 1
+    POSITIONING = 2
+    LIQUIDATION_SAFETY = 3
+
+
+@dataclass(frozen=True)
+class GateResult:
+    gate: Gate
+    status: GateStatus
+    reasons: tuple[str]
+    raw_values: dict
+
+
+@dataclass(frozen=True)
+class ProposedGridParams:
+    top: float
+    bottom: float
+    grid_levels: int
+    leverage: int
+    quote_investment: float
+
+
+@dataclass(frozen=True)
+class LiquidationEstimate:
+    proposal: ProposedGridParams
+    # None means no liquidation risk on that side (e.g. long-only grid has no upper liq)
+    # 0.0 from API also means no risk — never treat as missing
+    estimate_liquidation_price_up: float | None
+    estimate_liquidation_price_down: float | None
+    buffer_multiplier_up: float | None  # distance to liq / grid range width
+    buffer_multiplier_down: float | None
+
+
+@dataclass(frozen=True)
+class IndicatorSet:
+    interval: str
+    as_of: datetime
+    adx14: float
+    atr14: float
+    atr_pct_of_price: float
+    sma50: float
+    macd: float
+    macd_signal: float
+    rsi14: float
+    last_price: float
+    swing_high_14d: float
+    swing_low_14d: float
+    # Realized-vol term structure — computed by IndicatorService, consumed by Gate 1
+    realized_vol_1d: float
+    realized_vol_7d: float
+    realized_vol_30d: float
+
+
+@dataclass(frozen=True)
+class DecisionVerdict:
+    decision_id: UUID
+    symbol: str
+    as_of: datetime
+    action: VerdictAction
+    gates: list[GateResult]
+    suggested_grid_top: float | None
+    suggested_grid_bottom: float | None
+    suggested_leverage: int | None
+    notes: str
+
+
+@dataclass(frozen=True)
+class FundingOiSnapshot:
+    snapshot_id: UUID
+    symbol: str
+    as_of: datetime
+    funding_rate_last: float
+    funding_rate_annualized_pct: float
+    open_interest: float
+    oi_pct_change_7d: float | None  # None until 7 days of stored history exist
