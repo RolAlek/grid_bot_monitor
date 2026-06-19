@@ -1,15 +1,15 @@
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum, StrEnum
-from typing import Self
+from enum import Enum, IntEnum, StrEnum
+from typing import Any, Self
 from uuid import UUID
 
 
-class GateStatus(StrEnum):
-    PASS = "pass"
-    CAUTION = "caution"
-    FAIL = "fail"
+class GateStatus(IntEnum):
+    PASS = 0
+    CAUTION = 1
+    FAIL = 2
 
 
 class VerdictAction(StrEnum):
@@ -95,8 +95,8 @@ class Symbol:
 class GateResult:
     gate: Gate
     status: GateStatus
-    reasons: tuple[str]
-    raw_values: dict
+    reasons: tuple[str, ...]
+    raw_values: dict[str, Any]
 
 
 @dataclass(frozen=True)
