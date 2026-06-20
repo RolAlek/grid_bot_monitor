@@ -4,6 +4,7 @@ from uuid import uuid4
 from source.application.ports import MarketDataPort, NotifierPort
 from source.application.services.decision_history_service import DecisionHistoryService
 from source.application.use_cases.assess_positioning import AssessPositioning
+from source.constants import FUNDING_ANNUALIZATION_FACTOR
 from source.domain.value_objects import (
     DecisionVerdict,
     FundingOiSnapshot,
@@ -12,7 +13,7 @@ from source.domain.value_objects import (
     Symbol,
     VerdictAction,
 )
-from source.settings import DecisionEngineSettings
+from source.settings import Settings
 
 ALERT_EMOJI = {"PASS": "🟢", "CAUTION": "🟡", "FAIL": "🔴"}
 ALERT_TEMPLATE = (
@@ -25,15 +26,13 @@ ALERT_TEMPLATE = (
 
 
 class RunDailyPositioningCheck:
-    _FUNDING_ANNUALIZATION_FACTOR = 3 * 365 * 100
-
     def __init__(
         self,
         market_data: MarketDataPort,
         history: DecisionHistoryService,
         gate2: AssessPositioning,
         notifier: NotifierPort,
-        settings: DecisionEngineSettings,
+        settings: Settings,
     ) -> None:
         self._market_data = market_data
         self._history = history
@@ -43,16 +42,13 @@ class RunDailyPositioningCheck:
 
     async def run(self) -> GateResult:
         now = datetime.now(UTC)
-        symbol = self._settings.symbol
+        symbol = self._settings.pionex.symbol
 
-        # Fetch and persist OI snapshot (feeds the 7-day rolling history)
         oi = await self._market_data.get_open_interest(symbol)
         await self._history.persist_oi_snapshot(symbol, now, float(oi.open_interest))
 
-        # Latest funding rate
         funding_rows = await self._market_data.get_funding_rates(symbol, limit=1)
         rate = float(funding_rows[-1].rate)
-        annualized = rate * self._FUNDING_ANNUALIZATION_FACTOR
 
         oi_change = await self._history.compute_oi_pct_change_7d(symbol, now)
 
@@ -60,30 +56,21 @@ class RunDailyPositioningCheck:
             symbol=symbol,
             as_of=now,
             funding_rate_last=rate,
-            funding_rate_annualized_pct=annualized,
+            funding_rate_annualized_pct=rate * FUNDING_ANNUALIZATION_FACTOR,
             open_interest=float(oi.open_interest),
             oi_pct_change_7d=oi_change,
         )
-        gate_result = self._gate2.assess(snapshot)
+        result = self._gate2.assess(snapshot)
 
-        # Compare against yesterday's Gate 2 status (None if no prior run)
-        prev_status = await self._previous_gate2_status(symbol)
-        if gate_result.status != prev_status:
-            alert = self._format_alert(snapshot, gate_result, prev_status)
-            await self._notifier.send_alert(alert)
+        await self._send_alert(symbol, snapshot, result)
 
-        # Persist a positioning-only verdict so tomorrow's run can compare
         await self._history.persist_verdict(
             DecisionVerdict(
                 decision_id=uuid4(),
                 as_of=now,
                 symbol=symbol,
-                action=VerdictAction.HOLD
-                if gate_result.status == GateStatus.FAIL
-                else VerdictAction.REVIEW
-                if gate_result.status == GateStatus.CAUTION
-                else VerdictAction.LAUNCH,
-                gates=[gate_result],
+                action=self._resolve_action(result.status),
+                gates=[result],
                 suggested_grid_top=None,
                 suggested_grid_bottom=None,
                 suggested_leverage=None,
@@ -91,7 +78,7 @@ class RunDailyPositioningCheck:
             )
         )
 
-        return gate_result
+        return result
 
     async def _previous_gate2_status(self, symbol: Symbol) -> GateStatus | None:
         last = await self._history._repository.get_last_decision(symbol)
@@ -133,3 +120,15 @@ class RunDailyPositioningCheck:
                 return VerdictAction.REVIEW
             case GateStatus.PASS:
                 return VerdictAction.LAUNCH
+
+    async def _send_alert(
+        self,
+        symbol: Symbol,
+        snapshot: FundingOiSnapshot,
+        result: GateResult,
+    ) -> None:
+        prev_status = await self._previous_gate2_status(symbol)
+
+        if result.status != prev_status:
+            alert = self._format_alert(snapshot, result, prev_status)
+            await self._notifier.send_alert(alert)

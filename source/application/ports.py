@@ -16,7 +16,7 @@ class MarketDataPort(ABC):
     @abstractmethod
     async def get_klines(
         self,
-        symbol: str,
+        symbol: Symbol,
         interval: str,
         limit: int,
     ) -> list[Kline]: ...

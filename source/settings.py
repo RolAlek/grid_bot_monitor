@@ -23,6 +23,7 @@ class PionexSettings(_BaseSettings):
 
     symbol: Symbol = Symbol.BTC
     kline_interval: str = "4H"
+    limit: int = 500
 
     @property
     def connection_url(self):
@@ -52,7 +53,7 @@ class DecisionEngineSettings(_BaseSettings):
 @dataclass(frozen=True)
 class Settings:
     pionex: PionexSettings = field(default_factory=PionexSettings)
-    decision_engone: DecisionEngineSettings = field(
+    decision_engine: DecisionEngineSettings = field(
         default_factory=DecisionEngineSettings
     )
 
