@@ -1,8 +1,7 @@
-import re
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, Self
+from typing import Any
 from uuid import UUID
 
 
@@ -24,71 +23,8 @@ class Gate(Enum):
     LIQUIDATION_SAFETY = 3
 
 
-@dataclass(frozen=True)
-class Symbol:
-    base: str
-    quote: str
-    suffix: str | None = None
-
-    def __post_init__(self):
-        if not re.match(r"^[A-Z0-9]+$", self.base):
-            raise ValueError(f"Invalid base currency: {self.base}")
-        if not re.match(r"^[A-Z0-9]+$", self.quote):
-            raise ValueError(f"Invalid quote currency: {self.quote}")
-        if self.suffix is not None and not re.match(r"^[A-Z0-9_]+$", self.suffix):
-            raise ValueError(f"Invalid suffix: {self.suffix}")
-
-    @classmethod
-    def from_string(cls, raw: str) -> Self:
-        raw = raw.strip().upper()
-
-        separators = ["_", "/", "-"]
-        parts = None
-
-        for sep in separators:
-            if sep in raw:
-                parts = raw.split(sep)
-                break
-
-        if parts is None:
-            raise ValueError(
-                f"Unrecognized symbol format: {raw}. Expected separator among {separators}"
-            )
-
-        if len(parts) == 2:
-            base, quote = parts[0], parts[1]
-            suffix = None
-        else:
-            if len(parts) > 3:
-                raise ValueError(f"Too many parts in symbol: {raw}")
-            base = parts[0]
-            quote = parts[1]
-            suffix = parts[2] if len(parts) == 3 else None
-
-        return cls(base=base, quote=quote, suffix=suffix)
-
-    def to_pionex_format(self) -> str:
-        if self.suffix:
-            return f"{self.base}_{self.quote}_{self.suffix}"
-        return f"{self.base}_{self.quote}"
-
-    def to_binance_format(self) -> str:
-        if self.suffix:
-            return f"{self.base}{self.quote}_{self.suffix}"
-        return f"{self.base}{self.quote}"
-
-    def to_human_readable(self) -> str:
-        if self.suffix:
-            return f"{self.base}/{self.quote} ({self.suffix})"
-        return f"{self.base}/{self.quote}"
-
-    def __str__(self) -> str:
-        return self.to_human_readable()
-
-    def __repr__(self) -> str:
-        return (
-            f"Symbol(base={self.base!r}, quote={self.quote!r}, suffix={self.suffix!r})"
-        )
+class Symbol(StrEnum):
+    BTC = "USDT_BTC_REPR"
 
 
 @dataclass(frozen=True)
@@ -154,7 +90,6 @@ class DecisionVerdict:
 
 @dataclass(frozen=True)
 class FundingOiSnapshot:
-    snapshot_id: UUID
     symbol: Symbol
     as_of: datetime
     funding_rate_last: float
@@ -175,12 +110,14 @@ class Kline:
 
 @dataclass(frozen=True)
 class FundingRate:
-    pass
+    rate: str
+    time: datetime
 
 
 @dataclass(frozen=True)
 class OpenInterest:
-    pass
+    symbol: str
+    open_interest: str
 
 
 @dataclass(frozen=True)
