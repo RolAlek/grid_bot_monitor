@@ -34,7 +34,7 @@ ignore = [
 ]
 
 [lint.per-file-ignores]
-"migrations/*" = ["ALL"]
+"**/alembic/*" = ["ALL"]
 
 [lint.isort]
 combine-as-imports = true
