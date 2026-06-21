@@ -9,14 +9,15 @@ from source.application.use_cases.assess_liquidation_safety import (
 )
 from source.application.use_cases.assess_market_regime import AssessMarketRegime
 from source.application.use_cases.assess_positioning import AssessPositioning
-from source.application.use_cases.evaluate_launch_decision import EvaluateLaunchDecision
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
 from source.domain.value_objects import (
     DecisionVerdict,
     FundingOiSnapshot,
     GateResult,
+    GateStatus,
     ProposedGridParams,
     Symbol,
+    VerdictAction,
 )
 from source.settings import Settings
 
@@ -32,7 +33,6 @@ class RunWeeklyFullAssessment:
         gate1: AssessMarketRegime,
         gate2: AssessPositioning,
         gate3: AssessLiquidationSafety,
-        evaluator: EvaluateLaunchDecision,
         notifier: NotifierPort,
         settings: Settings,
     ) -> None:
@@ -44,7 +44,6 @@ class RunWeeklyFullAssessment:
         self._gate1 = gate1
         self._gate2 = gate2
         self._gate3 = gate3
-        self._evaluator = evaluator
         self._notifier = notifier
         self._settings = settings
 
@@ -63,7 +62,7 @@ class RunWeeklyFullAssessment:
         liq_estimate = await self._grid_validation.check_params(proposal)
         gate3_result = self._gate3.assess(liq_estimate)
 
-        verdict = self._evaluator.evaluate(
+        verdict = self._resolve(
             symbol=symbol,
             gates=[gate1_verdict, gate2_verdict, gate3_result],
             proposal=proposal,
@@ -111,3 +110,28 @@ class RunWeeklyFullAssessment:
             oi_pct_change_7d=oi_change,
         )
         return self._gate2.assess(snapshot)
+
+    def _resolve(
+        self,
+        symbol: Symbol,
+        gates: list[GateResult],
+        notes: str | None,
+        proposal: ProposedGridParams | None = None,
+    ) -> DecisionVerdict:
+        if any(gate.status == GateStatus.FAIL for gate in gates):
+            action = VerdictAction.HOLD
+        elif any(gate.status == GateStatus.CAUTION for gate in gates):
+            action = VerdictAction.REVIEW
+        else:
+            action = VerdictAction.LAUNCH
+
+        return DecisionVerdict(
+            as_of=datetime.now(UTC),
+            symbol=symbol,
+            action=action,
+            gates=gates,
+            suggested_grid_top=proposal.top if proposal else None,
+            suggested_grid_bottom=proposal.bottom if proposal else None,
+            suggested_leverage=proposal.leverage if proposal else None,
+            notes=notes,
+        )

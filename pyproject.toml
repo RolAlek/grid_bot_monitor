@@ -10,7 +10,6 @@ dependencies = [
     "pandas-ta>=0.4.71b0",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.2",
-    "sqlalchemy>=2.0.51",
 ]
 
 [dependency-groups]
