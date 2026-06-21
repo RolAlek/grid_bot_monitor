@@ -20,6 +20,7 @@ class PionexSettings(_BaseSettings):
     base_url: HttpUrl = HttpUrl("https://api.pionex.com")
     api_key: str | None = None
     api_secret: str | None = None
+    timeout: float = 10
 
     symbol: Symbol = Symbol.BTC
     kline_interval: str = "4H"

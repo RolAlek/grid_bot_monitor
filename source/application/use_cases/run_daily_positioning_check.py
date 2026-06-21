@@ -16,6 +16,7 @@ from source.domain.value_objects import (
 )
 from source.settings import Settings
 
+
 ALERT_EMOJI = {"PASS": "🟢", "CAUTION": "🟡", "FAIL": "🔴"}
 ALERT_TEMPLATE = (
     "{emoji} Gate status change — Positioning (Gate 2)\n"
@@ -100,9 +101,7 @@ class RunDailyPositioningCheck:
         prev_status: GateStatus | None,
     ) -> str:
         direction = "long" if snapshot.funding_rate_annualized_pct > 0 else "short"
-        oi_str = (
-            f"{snapshot.oi_pct_change_7d:.1f}%" if snapshot.oi_pct_change_7d else None
-        )
+        oi_str = f"{snapshot.oi_pct_change_7d:.1f}%" if snapshot.oi_pct_change_7d else None
         prev_str = prev_status.name if prev_status else "NONE"
         emoji = ALERT_EMOJI.get(result.status.name, "⚪")
 
