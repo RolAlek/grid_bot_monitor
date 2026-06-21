@@ -5,13 +5,25 @@ from datetime import datetime
 from source.domain.value_objects import Symbol, VerdictAction
 
 
-@dataclass(frozen=True, slots=True)
-class AbstractCreateDTO(ABC):
-    pass
+class AbstractDTO(ABC): ...  # noqa: B024
 
 
 @dataclass(frozen=True, slots=True)
-class OISnapshotDTO(AbstractCreateDTO):
+class AbstractCreateDTO(AbstractDTO): ...
+
+
+@dataclass(frozen=True, slots=True)
+class AbstractReadDTO(AbstractDTO): ...
+
+
+@dataclass(frozen=True, slots=True)
+class OISnapshotCrateDTO(AbstractCreateDTO):
+    symbol: Symbol
+    open_interests: float
+
+
+@dataclass(frozen=True, slots=True)
+class OISnapshotReadDTO(AbstractReadDTO):
     symbol: Symbol
     open_interests: float
 
@@ -25,7 +37,7 @@ class DecisionLogCreateDTO(AbstractCreateDTO):
 
 
 @dataclass(frozen=True, slots=True)
-class DecisionLogGetDTO(AbstractCreateDTO):
+class DecisionLogGetDTO(AbstractReadDTO):
     symbol: Symbol
     action: VerdictAction
     gates_json: str
