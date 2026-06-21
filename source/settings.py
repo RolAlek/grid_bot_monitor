@@ -26,7 +26,7 @@ class PionexSettings(_BaseSettings):
     limit: int = 500
 
     @property
-    def connection_url(self):
+    def connection_url(self) -> str:
         return self.base_url.encoded_string()
 
 
@@ -50,12 +50,20 @@ class DecisionEngineSettings(_BaseSettings):
     default_quote_investment: float = 1_000.0
 
 
+class DatabaseSettings(_BaseSettings):
+    url: str = "sqlite+aiosqlite:///{}.db"
+    name: str = "advisor"
+
+    @property
+    def connection_url(self) -> str:
+        return self.url.format(self.name)
+
+
 @dataclass(frozen=True)
 class Settings:
     pionex: PionexSettings = field(default_factory=PionexSettings)
-    decision_engine: DecisionEngineSettings = field(
-        default_factory=DecisionEngineSettings
-    )
+    decision_engine: DecisionEngineSettings = field(default_factory=DecisionEngineSettings)
+    database: DatabaseSettings = field(default_factory=DatabaseSettings)
 
 
 @lru_cache(maxsize=1, typed=True)
