@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum, StrEnum
-from uuid import UUID
+from enum import Enum, IntEnum, StrEnum
+from typing import Any
 
 
-class GateStatus(StrEnum):
-    PASS = "pass"
-    CAUTION = "caution"
-    FAIL = "fail"
+class GateStatus(IntEnum):
+    PASS = 0
+    CAUTION = 1
+    FAIL = 2
 
 
 class VerdictAction(StrEnum):
@@ -22,12 +22,16 @@ class Gate(Enum):
     LIQUIDATION_SAFETY = 3
 
 
+class Symbol(StrEnum):
+    BTC = "USDT_BTC_REPR"
+
+
 @dataclass(frozen=True)
 class GateResult:
     gate: Gate
     status: GateStatus
-    reasons: tuple[str]
-    raw_values: dict
+    reasons: tuple[str, ...]
+    raw_values: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -72,23 +76,48 @@ class IndicatorSet:
 
 @dataclass(frozen=True)
 class DecisionVerdict:
-    decision_id: UUID
-    symbol: str
+    symbol: Symbol
     as_of: datetime
     action: VerdictAction
     gates: list[GateResult]
     suggested_grid_top: float | None
     suggested_grid_bottom: float | None
     suggested_leverage: int | None
-    notes: str
+    notes: str | None
 
 
 @dataclass(frozen=True)
 class FundingOiSnapshot:
-    snapshot_id: UUID
-    symbol: str
+    symbol: Symbol
     as_of: datetime
     funding_rate_last: float
     funding_rate_annualized_pct: float
     open_interest: float
     oi_pct_change_7d: float | None  # None until 7 days of stored history exist
+
+
+@dataclass(frozen=True)
+class Kline:
+    time: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+
+
+@dataclass(frozen=True)
+class FundingRate:
+    rate: str
+    time: datetime
+
+
+@dataclass(frozen=True)
+class OpenInterest:
+    symbol: str
+    open_interest: float
+
+
+@dataclass(frozen=True)
+class IndexPrice:
+    pass
