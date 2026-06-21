@@ -4,21 +4,14 @@ from contextlib import AbstractAsyncContextManager
 from dataclasses import asdict
 
 from source.application.dto import DecisionLogCreateDTO
-from source.domain.value_objects import (
-    DecisionVerdict,
-    GateResult,
-    Symbol,
-    VerdictAction,
-)
-from source.infrastructure.database.repositories import DecisionLogRepository
+from source.domain.value_objects import DecisionVerdict, GateResult, Symbol, VerdictAction
+from source.infrastructure.database.repositories.decision_repository import DecisionLogRepository
 
 
 class DecisionLogService:
     def __init__(
         self,
-        provider_decision_log_repository: Callable[
-            [], AbstractAsyncContextManager[DecisionLogRepository]
-        ],
+        provider_decision_log_repository: Callable[[], AbstractAsyncContextManager[DecisionLogRepository]],
     ) -> None:
         self._provider_decision_log_repository = provider_decision_log_repository
 
