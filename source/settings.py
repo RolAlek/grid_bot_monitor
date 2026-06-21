@@ -54,6 +54,8 @@ class DatabaseSettings(_BaseSettings):
     url: str = "sqlite+aiosqlite:///{}.db"
     name: str = "advisor"
 
+    echo: bool = False
+
     @property
     def connection_url(self) -> str:
         return self.url.format(self.name)
