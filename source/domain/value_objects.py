@@ -115,7 +115,7 @@ class FundingRate:
 @dataclass(frozen=True)
 class OpenInterest:
     symbol: str
-    open_interest: str
+    open_interest: float
 
 
 @dataclass(frozen=True)
