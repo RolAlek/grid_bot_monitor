@@ -1,13 +1,14 @@
 from datetime import UTC, datetime
-from uuid import uuid4
 
 from source.application.ports import MarketDataPort, NotifierPort
-from source.application.services.decision_history_service import DecisionHistoryService
+from source.application.services.decision_log_service import DecisionLogService
+from source.application.services.oi_snapshot_service import OISnapshotService
 from source.application.use_cases.assess_positioning import AssessPositioning
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
 from source.domain.value_objects import (
     DecisionVerdict,
     FundingOiSnapshot,
+    Gate,
     GateResult,
     GateStatus,
     Symbol,
@@ -29,13 +30,15 @@ class RunDailyPositioningCheck:
     def __init__(
         self,
         market_data: MarketDataPort,
-        history: DecisionHistoryService,
+        oi_service: OISnapshotService,
+        decision_service: DecisionLogService,
         gate2: AssessPositioning,
         notifier: NotifierPort,
         settings: Settings,
     ) -> None:
         self._market_data = market_data
-        self._history = history
+        self._oi_service = oi_service
+        self._decision_service = decision_service
         self._gate2 = gate2
         self._notifier = notifier
         self._settings = settings
@@ -45,12 +48,12 @@ class RunDailyPositioningCheck:
         symbol = self._settings.pionex.symbol
 
         oi = await self._market_data.get_open_interest(symbol)
-        await self._history.persist_oi_snapshot(symbol, now, float(oi.open_interest))
+        await self._oi_service.persist_oi_snapshot(symbol, float(oi.open_interest))
 
         funding_rows = await self._market_data.get_funding_rates(symbol, limit=1)
         rate = float(funding_rows[-1].rate)
 
-        oi_change = await self._history.compute_oi_pct_change_7d(symbol, now)
+        oi_change = await self._oi_service.compute_oi_pct_change_7d(symbol, now)
 
         snapshot = FundingOiSnapshot(
             symbol=symbol,
@@ -64,9 +67,8 @@ class RunDailyPositioningCheck:
 
         await self._send_alert(symbol, snapshot, result)
 
-        await self._history.persist_verdict(
+        await self._decision_service.persist_verdict(
             DecisionVerdict(
-                decision_id=uuid4(),
                 as_of=now,
                 symbol=symbol,
                 action=self._resolve_action(result.status),
@@ -81,12 +83,14 @@ class RunDailyPositioningCheck:
         return result
 
     async def _previous_gate2_status(self, symbol: Symbol) -> GateStatus | None:
-        last = await self._history._repository.get_last_decision(symbol)
+        last = await self._decision_service.get_last_decision(symbol)
         if last is None:
             return None
+
         for gate in last.gates:
-            if gate.gate == "positioning":
+            if gate.gate == Gate.POSITIONING:
                 return gate.status
+
         return None
 
     @staticmethod

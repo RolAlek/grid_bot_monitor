@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, IntEnum, StrEnum
 from typing import Any
-from uuid import UUID
 
 
 class GateStatus(IntEnum):
@@ -77,7 +76,6 @@ class IndicatorSet:
 
 @dataclass(frozen=True)
 class DecisionVerdict:
-    decision_id: UUID
     symbol: Symbol
     as_of: datetime
     action: VerdictAction
@@ -85,7 +83,7 @@ class DecisionVerdict:
     suggested_grid_top: float | None
     suggested_grid_bottom: float | None
     suggested_leverage: int | None
-    notes: str
+    notes: str | None
 
 
 @dataclass(frozen=True)
