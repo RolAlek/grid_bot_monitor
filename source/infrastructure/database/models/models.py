@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import CheckConstraint, String
+from sqlalchemy import CheckConstraint, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from source.domain.entities import VerdictAction
@@ -10,6 +10,7 @@ from source.infrastructure.database.models.types import JSONType, _symbol
 
 class OISnapshot(Base):
     __tablename__ = "oi_snapshots"
+    __table_args__ = (Index("idx_oi_snapshot_symbol_created_at", "symbol", "created_at"),)
 
     symbol: Mapped[_symbol]
     funding_rate_last: Mapped[float]
