@@ -1,4 +1,4 @@
-from source.domain.value_objects import (
+from source.domain.entities import (
     Gate,
     GateResult,
     GateStatus,

@@ -1,4 +1,4 @@
-from source.domain.value_objects import Gate, GateResult, GateStatus, IndicatorSet, ProposedGridParams
+from source.domain.entities import Gate, GateResult, GateStatus, IndicatorSet, ProposedGridParams
 from source.settings import DecisionEngineSettings
 
 

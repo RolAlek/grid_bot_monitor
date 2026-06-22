@@ -4,8 +4,8 @@ from source.application.ports import MarketDataPort, NotifierPort
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.oi_snapshot_service import OISnapshotService
 from source.application.use_cases.assess_positioning import AssessPositioning
-from source.constants import FUNDING_ANNUALIZATION_FACTOR
-from source.domain.value_objects import (
+from source.application.use_cases.checkers.base import BaseChecker
+from source.domain.entities import (
     DecisionVerdict,
     FundingOiSnapshot,
     Gate,
@@ -27,20 +27,19 @@ ALERT_TEMPLATE = (
 )
 
 
-class RunDailyPositioningCheck:
+class RunDailyPositioningCheck(BaseChecker):
     def __init__(
         self,
         market_data: MarketDataPort,
+        gate2: AssessPositioning,
         oi_service: OISnapshotService,
         decision_service: DecisionLogService,
-        gate2: AssessPositioning,
         notifier: NotifierPort,
         settings: Settings,
     ) -> None:
-        self._market_data = market_data
-        self._oi_service = oi_service
+        super().__init__(market_data, gate2, oi_service)
+
         self._decision_service = decision_service
-        self._gate2 = gate2
         self._notifier = notifier
         self._settings = settings
 
@@ -48,23 +47,7 @@ class RunDailyPositioningCheck:
         now = datetime.now(UTC)
         symbol = self._settings.pionex.symbol
 
-        oi = await self._market_data.get_open_interest(symbol)
-        await self._oi_service.persist_oi_snapshot(symbol, float(oi.open_interest))
-
-        funding_rows = await self._market_data.get_funding_rates(symbol, limit=1)
-        rate = float(funding_rows[-1].rate)
-
-        oi_change = await self._oi_service.compute_oi_pct_change_7d(symbol, now)
-
-        snapshot = FundingOiSnapshot(
-            symbol=symbol,
-            as_of=now,
-            funding_rate_last=rate,
-            funding_rate_annualized_pct=rate * FUNDING_ANNUALIZATION_FACTOR,
-            open_interest=float(oi.open_interest),
-            oi_pct_change_7d=oi_change,
-        )
-        result = self._gate2.assess(snapshot)
+        result, snapshot = await self.check_second_gate(symbol, now, is_save=True)
 
         await self._send_alert(symbol, snapshot, result)
 
@@ -73,7 +56,7 @@ class RunDailyPositioningCheck:
                 as_of=now,
                 symbol=symbol,
                 action=self._resolve_action(result.status),
-                gates=[result],
+                gates=(result,),
                 suggested_grid_top=None,
                 suggested_grid_bottom=None,
                 suggested_leverage=None,

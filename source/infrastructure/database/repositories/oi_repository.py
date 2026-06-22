@@ -27,12 +27,12 @@ class SQLAlchemySnapshotRepository(SnapshotRepository):
             .where(
                 and_(
                     OISnapshot.symbol == symbol.value,
-                    OISnapshot.created_at >= as_of - timedelta(days=7),
+                    OISnapshot.created_at >= as_of.replace(tzinfo=None) - timedelta(days=7),
                 )
             )
             .order_by(OISnapshot.created_at.asc())
         )
-        results = await self._session.scalars(stmt)
+        results = (await self._session.scalars(stmt)).all()
         return [
             FundingOiSnapshot(
                 symbol=Symbol(snapshot.symbol),

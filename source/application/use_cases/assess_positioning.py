@@ -1,4 +1,4 @@
-from source.domain.value_objects import FundingOiSnapshot, Gate, GateResult, GateStatus
+from source.domain.entities import FundingOiSnapshot, Gate, GateResult, GateStatus
 from source.settings import DecisionEngineSettings
 
 

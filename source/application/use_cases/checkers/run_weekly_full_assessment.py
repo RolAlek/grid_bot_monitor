@@ -4,25 +4,15 @@ from source.application.ports import GridValidationPort, MarketDataPort, Notifie
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.indicator_service import IndicatorService
 from source.application.services.oi_snapshot_service import OISnapshotService
-from source.application.use_cases.assess_liquidation_safety import (
-    AssessLiquidationSafety,
-)
+from source.application.use_cases.assess_liquidation_safety import AssessLiquidationSafety
 from source.application.use_cases.assess_market_regime import AssessMarketRegime
 from source.application.use_cases.assess_positioning import AssessPositioning
-from source.constants import FUNDING_ANNUALIZATION_FACTOR
-from source.domain.value_objects import (
-    DecisionVerdict,
-    FundingOiSnapshot,
-    GateResult,
-    GateStatus,
-    ProposedGridParams,
-    Symbol,
-    VerdictAction,
-)
+from source.application.use_cases.checkers.base import BaseChecker
+from source.domain.entities import DecisionVerdict, GateResult, GateStatus, ProposedGridParams, Symbol, VerdictAction
 from source.settings import Settings
 
 
-class RunWeeklyFullAssessment:
+class RunWeeklyFullAssessment(BaseChecker):
     def __init__(
         self,
         market_data: MarketDataPort,
@@ -36,13 +26,12 @@ class RunWeeklyFullAssessment:
         notifier: NotifierPort,
         settings: Settings,
     ) -> None:
-        self._market_data = market_data
+        super().__init__(market_data, gate2, oi_service)
+
         self._decision_service = decision_service
-        self._oi_service = oi_service
         self._grid_validation = grid_validation
         self._indicator_service = indicator_service
         self._gate1 = gate1
-        self._gate2 = gate2
         self._gate3 = gate3
         self._notifier = notifier
         self._settings = settings
@@ -53,18 +42,18 @@ class RunWeeklyFullAssessment:
         interval = self._settings.pionex.kline_interval
 
         proposal, gate1_verdict = await self._check_first_gate(
-            symbol,
-            interval,
-            self._settings.pionex.limit,
+            symbol=symbol,
+            interval=interval,
+            limit=self._settings.pionex.limit,
         )
-        gate2_verdict = await self._check_second_gate(symbol, now)
+        gate2_result, _ = await self.check_second_gate(symbol, now, is_save=False)
 
         liq_estimate = await self._grid_validation.check_params(proposal)
         gate3_result = self._gate3.assess(liq_estimate)
 
         verdict = self._resolve(
             symbol=symbol,
-            gates=[gate1_verdict, gate2_verdict, gate3_result],
+            gates=[gate1_verdict, gate2_result, gate3_result],
             proposal=proposal,
             notes="weekly full assessment",
         )
@@ -94,23 +83,6 @@ class RunWeeklyFullAssessment:
 
         return proposal, result
 
-    async def _check_second_gate(self, symbol: Symbol, now: datetime) -> GateResult:
-        funding_rows = await self._market_data.get_funding_rates(symbol, limit=1)
-        rate = float(funding_rows[-1].rate)
-        annualized = rate * FUNDING_ANNUALIZATION_FACTOR
-        oi = await self._market_data.get_open_interest(symbol)
-        oi_change = await self._oi_service.compute_oi_pct_change_7d(symbol, now)
-
-        snapshot = FundingOiSnapshot(
-            symbol=symbol,
-            as_of=now,
-            funding_rate_last=rate,
-            funding_rate_annualized_pct=annualized,
-            open_interest=oi.open_interest,
-            oi_pct_change_7d=oi_change,
-        )
-        return self._gate2.assess(snapshot)
-
     def _resolve(
         self,
         symbol: Symbol,
@@ -129,7 +101,7 @@ class RunWeeklyFullAssessment:
             as_of=datetime.now(UTC),
             symbol=symbol,
             action=action,
-            gates=gates,
+            gates=tuple(gates),
             suggested_grid_top=proposal.top if proposal else None,
             suggested_grid_bottom=proposal.bottom if proposal else None,
             suggested_leverage=proposal.leverage if proposal else None,

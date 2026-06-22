@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from source.domain.value_objects import (
+from source.domain.entities import (
     DecisionVerdict,
     FundingRate,
     IndexPrice,
