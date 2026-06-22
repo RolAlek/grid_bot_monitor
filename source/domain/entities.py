@@ -1,29 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum, IntEnum, StrEnum
 from typing import Any
 
-
-class GateStatus(IntEnum):
-    PASS = 0
-    CAUTION = 1
-    FAIL = 2
-
-
-class VerdictAction(StrEnum):
-    LAUNCH = "launch"
-    HOLD = "hold"
-    REVIEW = "review"
-
-
-class Gate(Enum):
-    REGIME_RANGE_FIT = 1
-    POSITIONING = 2
-    LIQUIDATION_SAFETY = 3
-
-
-class Symbol(StrEnum):
-    BTC = "USDT_BTC_REPR"
+from source.domain.value_objects import Gate, GateStatus, GridType, Symbol, Trend, VerdictAction
 
 
 @dataclass(frozen=True)
@@ -36,22 +15,40 @@ class GateResult:
 
 @dataclass(frozen=True)
 class ProposedGridParams:
+    symbol: Symbol
     top: float
     bottom: float
     grid_levels: int
     leverage: int
     quote_investment: float
+    trend: Trend
+    grid_type: GridType
+
+    @property
+    def grid_range(self) -> float:
+        return self.top - self.bottom
 
 
 @dataclass(frozen=True)
 class LiquidationEstimate:
     proposal: ProposedGridParams
-    # None means no liquidation risk on that side (e.g. long-only grid has no upper liq)
-    # 0.0 from API also means no risk — never treat as missing
+
     estimate_liquidation_price_up: float | None
     estimate_liquidation_price_down: float | None
-    buffer_multiplier_up: float | None  # distance to liq / grid range width
-    buffer_multiplier_down: float | None
+
+    @property
+    def buffer_multiplier_up(self) -> float | None:
+        if self.estimate_liquidation_price_up:
+            return (self.estimate_liquidation_price_up - self.proposal.top) / self.proposal.grid_range
+
+        return None
+
+    @property
+    def buffer_multiplier_down(self) -> float | None:
+        if self.estimate_liquidation_price_down:
+            return (self.proposal.bottom - self.estimate_liquidation_price_down) / self.proposal.grid_range
+
+        return None
 
 
 @dataclass(frozen=True)

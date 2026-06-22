@@ -1,0 +1,46 @@
+from enum import Enum, IntEnum, StrEnum
+
+
+class GateStatus(IntEnum):
+    PASS = 0
+    CAUTION = 1
+    FAIL = 2
+
+
+class VerdictAction(StrEnum):
+    LAUNCH = "launch"
+    HOLD = "hold"
+    REVIEW = "review"
+
+
+class Gate(Enum):
+    REGIME_RANGE_FIT = 1
+    POSITIONING = 2
+    LIQUIDATION_SAFETY = 3
+
+
+class GridType(StrEnum):
+    ARITHMETIC = "arithmetic"
+    GEOMETRIC = "geometric"
+
+
+class Trend(StrEnum):
+    LONG = "long"
+    SHORT = "short"
+    NEUTRAL = "no_trend"
+
+
+class Symbol(StrEnum):
+    BTC = "USDT_BTC_REPR"
+
+    @property
+    def get_quote(self) -> str:
+        return self.split("_")[0]
+
+    @property
+    def get_base(self) -> str:
+        return self.split("_")[1]
+
+    @property
+    def get_type(self) -> str:
+        return self.split("_")[2]
