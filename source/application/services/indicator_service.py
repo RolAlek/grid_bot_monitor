@@ -8,7 +8,7 @@ import pandas as pd
 import pandas_ta as ta
 
 from source.application.exceptions import InsufficientKlineDataError, UnsupportedIntervalError
-from source.domain.value_objects import IndicatorSet, Kline
+from source.domain.entities import IndicatorSet, Kline
 
 
 class IndicatorService:
