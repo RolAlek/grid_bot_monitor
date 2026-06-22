@@ -1,27 +1,12 @@
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from http import HTTPMethod
-from typing import Any, TypeVar, cast
+from typing import Any, cast
 
 from httpx import AsyncClient, Auth
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from source.infrastructure.exceptions import HttpSerializationError
-
-
-PrimitiveData = str | int | float | bool | None
-
-TResponse = TypeVar("TResponse", bound=BaseModel)
-
-IncExType = set[int] | set[str] | dict[int, Any] | dict[str, Any]
-PayloadType = BaseModel | Sequence[BaseModel]
-ParamType = (
-    Mapping[str, PrimitiveData | Sequence[PrimitiveData]]
-    | list[tuple[str, PrimitiveData]]
-    | tuple[tuple[str, PrimitiveData], ...]
-    | str
-    | bytes
-)
-RequestJson = Mapping[str, Any] | str | bytes
+from source.infrastructure.exceptions import HttpSerializationError, HttpValidationError
+from source.infrastructure.http.types import HeaderTypes, IncExType, PayloadType, RequestJson, TError, TResponse
 
 
 class BaseHTTPClient:
@@ -36,31 +21,44 @@ class BaseHTTPClient:
         self,
         path: str,
         response_model: type[BaseModel],
+        error_model: type[BaseModel],
         *,
+        headers: HeaderTypes | None = None,
         params: dict[str, Any] | None = None,
-    ) -> TResponse:
-        return await self._execute(method=HTTPMethod.GET, path=path, response_model=response_model, params=params)  # type: ignore[call-arg]
+    ) -> TResponse | TError:
+        return await self._execute(
+            method=HTTPMethod.GET,
+            path=path,
+            response_model=response_model,
+            error_model=error_model,
+            headers=headers,
+            params=params,
+        )  # type: ignore[call-arg]
 
     async def post(
         self,
         path: str,
+        response_model: type[BaseModel],
+        error_model: type[BaseModel],
         *,
         payload: PayloadType,
-        response_model: type[BaseModel],
         request_model: type[BaseModel],
+        headers: HeaderTypes | None = None,
         include: IncExType | None = None,
         exclude: IncExType | None = None,
         by_alias: bool = False,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ) -> TResponse:
+    ) -> TResponse | TError:
         return await self.post(  # type: ignore[call-arg]
             method=HTTPMethod.POST,
             path=path,
             payload=payload,
             request_model=request_model,
             response_model=response_model,
+            error_model=error_model,
+            headers=headers,
             include=include,
             exclude=exclude,
             by_alias=by_alias,
@@ -74,17 +72,19 @@ class BaseHTTPClient:
         method: HTTPMethod,
         path: str,
         response_model: type[BaseModel],
+        error_model: type[BaseModel],
         *,
         params: dict[str, Any] | None = None,
         payload: PayloadType | None = None,
         request_model: type[BaseModel] | None = None,
+        headers: HeaderTypes | None = None,
         include: IncExType | None,
         exclude: IncExType | None,
         by_alias: bool = False,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
-    ) -> TResponse:
+    ) -> TResponse | TError:
         serialized_payload: RequestJson | None = None
 
         if payload and request_model:
@@ -104,14 +104,18 @@ class BaseHTTPClient:
                 method=method,
                 url=path,
                 params=params,
+                headers=headers,
                 json=serialized_payload,
             )
 
         response.raise_for_status()
 
-        parsed_response = TypeAdapter(response_model).validate_json(await response.aread())
-
-        return cast("TResponse", parsed_response)
+        result = self._validate_response(
+            content=await response.aread(),
+            response_model=response_model,
+            error_model=error_model,
+        )
+        return cast("TResponse | TError", result)
 
     @staticmethod
     def _serialize_payload(
@@ -156,3 +160,32 @@ class BaseHTTPClient:
                 model_name=request_model.__name__,
                 original_error=error,
             ) from error
+
+    def _validate_response(
+        self,
+        content: bytes,
+        response_model: type[TResponse],
+        error_model: type[TError],
+    ) -> TResponse | TError:
+        try:
+            return TypeAdapter(response_model).validate_json(content)
+        except ValidationError:
+            return self._validate_error_response(
+                content=content,
+                error_model=error_model,
+            )
+
+    def _validate_error_response(
+        self,
+        content: bytes,
+        error_model: type[TError],
+    ) -> TError:
+        try:
+            return TypeAdapter(error_model).validate_json(content)
+        except ValidationError as validation_error:
+            raise HttpValidationError(
+                f"Failed to validate error response with model {error_model.__name__}",
+                model_name=error_model.__name__,
+                validation_errors=[dict(error) for error in validation_error.errors()],
+                original_error=validation_error,
+            ) from validation_error
