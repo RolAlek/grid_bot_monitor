@@ -4,7 +4,7 @@ from functools import lru_cache
 from pydantic import HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from source.domain.entities import Symbol
+from source.domain.value_objects import Symbol
 
 
 class _BaseSettings(BaseSettings):

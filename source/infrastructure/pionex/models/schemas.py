@@ -41,6 +41,7 @@ class CheckFuturesGridParametersRequestSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     base: str
+    quote: str
     bu_order_data: DataObject = Field(alias="buOrderData")
 
 
