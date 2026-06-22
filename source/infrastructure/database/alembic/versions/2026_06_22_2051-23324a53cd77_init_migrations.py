@@ -1,22 +1,23 @@
 """init migrations
 
-Revision ID: ddf39e47226d
+Revision ID: 23324a53cd77
 Revises:
-Create Date: 2026-06-21 17:17:44.363724
+Create Date: 2026-06-22 20:51:59.471972
 
 """
 
-from collections.abc import Sequence
+from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
 
+from source.infrastructure.database.models.types import JSONType
 
 # revision identifiers, used by Alembic.
-revision: str = "ddf39e47226d"
-down_revision: str | Sequence[str] | None = None
-branch_labels: str | Sequence[str] | None = None
-depends_on: str | Sequence[str] | None = None
+revision: str = "23324a53cd77"
+down_revision: Union[str, Sequence[str], None] = None
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
@@ -25,17 +26,21 @@ def upgrade() -> None:
     op.create_table(
         "decision_logs",
         sa.Column("symbol", sa.String(length=16), nullable=False),
-        sa.Column("action", sa.String(), nullable=False),
-        sa.Column("gates_json", sa.String(), nullable=False),
+        sa.Column("action", sa.String(length=32), nullable=False),
+        sa.Column("gates_json", JSONType(), nullable=False),
         sa.Column("notes", sa.String(), nullable=True),
         sa.Column("oid", sa.String(length=36), nullable=False),
         sa.Column("created_at", sa.DateTime(), server_default=sa.text("(CURRENT_TIMESTAMP)"), nullable=False),
+        sa.CheckConstraint("action IN ('launch', 'hold', 'review')", name="chk_action"),
         sa.PrimaryKeyConstraint("oid"),
     )
     op.create_table(
         "oi_snapshots",
         sa.Column("symbol", sa.String(length=16), nullable=False),
-        sa.Column("open_interests", sa.Float(), nullable=False),
+        sa.Column("funding_rate_last", sa.Float(), nullable=False),
+        sa.Column("funding_rate_annualized_pct", sa.Float(), nullable=False),
+        sa.Column("open_interest", sa.Float(), nullable=False),
+        sa.Column("oi_pct_change_7d", sa.Float(), nullable=True),
         sa.Column("oid", sa.String(length=36), nullable=False),
         sa.Column("created_at", sa.DateTime(), server_default=sa.text("(CURRENT_TIMESTAMP)"), nullable=False),
         sa.PrimaryKeyConstraint("oid"),
