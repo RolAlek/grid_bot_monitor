@@ -51,13 +51,13 @@ class BaseHTTPClient:
         exclude_defaults: bool = False,
         exclude_none: bool = False,
     ) -> TResponse | TError:
-        return await self.post(  # type: ignore[call-arg]
+        return await self._execute(  # type: ignore[call-arg]
             method=HTTPMethod.POST,
             path=path,
-            payload=payload,
-            request_model=request_model,
             response_model=response_model,
             error_model=error_model,
+            payload=payload,
+            request_model=request_model,
             headers=headers,
             include=include,
             exclude=exclude,
