@@ -79,11 +79,11 @@ class DecisionVerdict:
     symbol: Symbol
     as_of: datetime
     action: VerdictAction
-    gates: list[GateResult]
-    suggested_grid_top: float | None
-    suggested_grid_bottom: float | None
-    suggested_leverage: int | None
-    notes: str | None
+    gates: tuple[GateResult, ...]
+    suggested_grid_top: float | None = None
+    suggested_grid_bottom: float | None = None
+    suggested_leverage: int | None = None
+    notes: str | None = None
 
 
 @dataclass(frozen=True)

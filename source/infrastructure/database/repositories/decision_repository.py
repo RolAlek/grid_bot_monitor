@@ -1,21 +1,31 @@
+from abc import abstractmethod
+from dataclasses import asdict
+from typing import Protocol
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from source.application.dto import DecisionLogCreateDTO, DecisionLogGetDTO
-from source.domain.value_objects import Symbol, VerdictAction
+from source.domain.entities import DecisionVerdict, GateResult, Symbol, VerdictAction
 from source.infrastructure.database.models import DecisionLog
-from source.infrastructure.database.repositories.base import BaseSQLAlchemyRepository
 
 
-class DecisionLogRepository(BaseSQLAlchemyRepository[DecisionLog, DecisionLogCreateDTO]):
-    def __init__(self, session: AsyncSession, model: type[DecisionLog]) -> None:
-        super().__init__(session, model)
+class DecisionLogRepository(Protocol):
+    @abstractmethod
+    async def get_last_decision(self, symbol: Symbol) -> DecisionVerdict | None: ...
 
-    async def get_last_decision(self, symbol: Symbol) -> DecisionLogGetDTO | None:
+    @abstractmethod
+    async def save_decision(self, data: DecisionVerdict) -> None: ...
+
+
+class SQLAlchemyDecisionLogRepository(DecisionLogRepository):
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_last_decision(self, symbol: Symbol) -> DecisionVerdict | None:
         stmt = (
-            select(self._model)
-            .where(self._model.symbol == symbol.value)
-            .order_by(self._model.created_at.desc())
+            select(DecisionLog)
+            .where(DecisionLog.symbol == symbol.value)
+            .order_by(DecisionLog.created_at.desc())
             .limit(1)
         )
         result = await self._session.scalar(stmt)
@@ -23,10 +33,20 @@ class DecisionLogRepository(BaseSQLAlchemyRepository[DecisionLog, DecisionLogCre
         if not result:
             return None
 
-        return DecisionLogGetDTO(
+        return DecisionVerdict(
             symbol=Symbol(result.symbol),
+            as_of=result.created_at,
             action=VerdictAction(result.action),
-            gates_json=result.gates_json,
+            gates=tuple(GateResult(**gate) for gate in result.gates_json),
             notes=result.notes,
-            created_at=result.created_at,
         )
+
+    async def save_decision(self, data: DecisionVerdict) -> None:
+        obj = DecisionLog(
+            symbol=data.symbol.value,
+            action=data.action.value,
+            gates_json=tuple(asdict(gate) for gate in data.gates),
+            notes=data.notes,
+        )
+        self._session.add(obj)
+        await self._session.commit()
