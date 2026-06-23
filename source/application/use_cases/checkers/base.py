@@ -23,6 +23,7 @@ class BaseChecker:
     ) -> tuple[GateResult, FundingOiSnapshot]:
         oi = await self._market_data.get_open_interest(symbol)
         funding_rows = await self._market_data.get_funding_rates(symbol, limit=1)
+        funding_rows.sort(key=lambda rate: rate.time)
         rate = float(funding_rows[-1].rate)
 
         oi_change = await self._oi_service.compute_oi_pct_change_7d(

@@ -20,8 +20,8 @@ class BaseHTTPClient:
     async def get(
         self,
         path: str,
-        response_model: type[BaseModel],
-        error_model: type[BaseModel],
+        response_model: type[TResponse],
+        error_model: type[TError],
         *,
         headers: HeaderTypes | None = None,
         params: dict[str, Any] | None = None,
@@ -38,8 +38,8 @@ class BaseHTTPClient:
     async def post(
         self,
         path: str,
-        response_model: type[BaseModel],
-        error_model: type[BaseModel],
+        response_model: type[TResponse],
+        error_model: type[TError],
         *,
         params: dict[str, Any] | None = None,
         payload: PayloadType,
@@ -73,8 +73,8 @@ class BaseHTTPClient:
         self,
         method: HTTPMethod,
         path: str,
-        response_model: type[BaseModel],
-        error_model: type[BaseModel],
+        response_model: type[TResponse],
+        error_model: type[TError],
         *,
         params: dict[str, Any] | None = None,
         payload: PayloadType | None = None,
@@ -112,12 +112,11 @@ class BaseHTTPClient:
 
         response.raise_for_status()
 
-        result = self._validate_response(
+        return self._validate_response(
             content=await response.aread(),
             response_model=response_model,
             error_model=error_model,
         )
-        return cast("TResponse | TError", result)
 
     @staticmethod
     def _serialize_payload(
@@ -163,7 +162,7 @@ class BaseHTTPClient:
                 original_error=error,
             ) from error
 
-    def _validate_response(
+    def _validate_response[TResponse, TError](
         self,
         content: bytes,
         response_model: type[TResponse],
@@ -177,7 +176,7 @@ class BaseHTTPClient:
                 error_model=error_model,
             )
 
-    def _validate_error_response(
+    def _validate_error_response[TError](
         self,
         content: bytes,
         error_model: type[TError],

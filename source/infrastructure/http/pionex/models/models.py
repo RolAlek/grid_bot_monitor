@@ -16,7 +16,7 @@ class BaseResponse(BaseSchema):
 
 
 class SuccessResponse[TData: BaseModel](BaseResponse):
-    data: TData
+    data: TData | None = None
 
 
 class ErrorResponse(BaseResponse):
@@ -69,29 +69,29 @@ class CheckFuturesGridParametersResponseSchema(SuccessResponse[CheckFuturesGridP
 
 
 class CandleItem(BaseSchema):
-    time: int | None = None
-    open: str | None = None
-    close: str | None = None
-    high: str | None = None
-    low: str | None = None
-    volume: str | None = None
+    time: int
+    open: float
+    close: float
+    high: float
+    low: float
+    volume: float
 
 
 class CandleDataObject(BaseSchema):
-    candles: list[CandleItem] = Field(alias="klines", default_factory=list)
+    candles: list[CandleItem] = Field(alias="klines")
 
 
 class GetCandlesResponseSchema(SuccessResponse[CandleDataObject]): ...
 
 
 class RateItem(BaseSchema):
-    funding_rate: str | None = Field(None, alias="fundingRate")
-    funding_time: int | None = Field(None, alias="fundingTime")
+    funding_rate: str = Field(alias="fundingRate")
+    funding_time: int = Field(alias="fundingTime")
 
 
 class FundingRateObject(BaseSchema):
     symbol: str
-    rates: list[RateItem] = Field(default_factory=list)
+    rates: list[RateItem]
 
 
 class GetFundingRatesResponseSchema(SuccessResponse[FundingRateObject]): ...
@@ -99,7 +99,7 @@ class GetFundingRatesResponseSchema(SuccessResponse[FundingRateObject]): ...
 
 class OpenInterestItem(BaseSchema):
     symbol: str | None = None
-    open_interest: str | None = Field(None, alias="openInterest")
+    open_interest: float | None = Field(None, alias="openInterest")
 
 
 class OpenInterestsDataObject(BaseSchema):
