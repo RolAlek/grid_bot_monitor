@@ -1,5 +1,5 @@
 from source.domain.entities import GateResult, LiquidationEstimate
-from source.domain.value_objects import Gate, GateStatus
+from source.domain.value_objects import Gate, GateStatus, Trend
 from source.settings import DecisionEngineSettings
 
 
@@ -31,6 +31,12 @@ class AssessLiquidationSafety:
                 f"Lower liq buffer {estimate.buffer_multiplier_down:.2f}x "
                 f"below minimum {self._settings.liq_buffer_multiplier_min}x"
             )
+
+        if estimate.proposal.trend == Trend.NEUTRAL and (
+            estimate.buffer_multiplier_up is None or estimate.buffer_multiplier_down is None
+        ):
+            fail = True
+            reasons.append("Neutral grid missing a liquidation buffer on one side — treat as unverified")
 
         return GateResult(
             gate=Gate.LIQUIDATION_SAFETY,

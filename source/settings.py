@@ -35,6 +35,7 @@ class DecisionEngineSettings(_BaseSettings):
     adx_pass_max: float = 25.0
     adx_caution_max: float = 30.0
     atr_range_multiplier_min: float = 3.0
+    target_cell_atr_fraction: float = 0.3
 
     funding_annualized_caution_pct: float = 20.0
     funding_annualized_fail_pct: float = 40.0
@@ -42,14 +43,18 @@ class DecisionEngineSettings(_BaseSettings):
     oi_7d_change_fail_pct: float = 20.0
     vol_term_structure_min_ratio: float = 1.05
 
+    trend_bias_long_threshold: int = 2
+    trend_bias_short_threshold: int = -2
+
     liq_buffer_multiplier_min: float = 2.5
     leverage_hard_cap: int = 5
 
     # Default grid parameters used when auto-drawing a proposal from swing range
-    default_grid_rows: int = 50
-    default_leverage: int = 3
+    default_leverage: int = 1
     default_quote_investment: float = 1_000.0
     default_grid_type: GridType = GridType.GEOMETRIC
+    min_grid_rows: int = 5
+    max_grid_rows: int = 120
 
 
 class DatabaseSettings(_BaseSettings):

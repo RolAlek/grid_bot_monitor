@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from source.application.ports import GridValidationPort, MarketDataPort, NotifierPort
 from source.application.services.decision_log_service import DecisionLogService
+from source.application.services.grid_builder import GridProposalBuilder
 from source.application.services.indicator_service import IndicatorService
 from source.application.services.oi_snapshot_service import OISnapshotService
 from source.application.use_cases.assess_liquidation_safety import AssessLiquidationSafety
@@ -9,7 +10,7 @@ from source.application.use_cases.assess_market_regime import AssessMarketRegime
 from source.application.use_cases.assess_positioning import AssessPositioning
 from source.application.use_cases.checkers.base import BaseChecker
 from source.domain.entities import DecisionVerdict, GateResult, ProposedGridParams
-from source.domain.value_objects import GateStatus, Symbol, Trend, VerdictAction
+from source.domain.value_objects import GateStatus, Symbol, VerdictAction
 from source.settings import Settings
 
 
@@ -21,6 +22,7 @@ class RunWeeklyFullAssessment(BaseChecker):
         indicator_service: IndicatorService,
         decision_service: DecisionLogService,
         oi_service: OISnapshotService,
+        grid_builder: GridProposalBuilder,
         gate1: AssessMarketRegime,
         gate2: AssessPositioning,
         gate3: AssessLiquidationSafety,
@@ -32,6 +34,7 @@ class RunWeeklyFullAssessment(BaseChecker):
         self._decision_service = decision_service
         self._grid_validation = grid_validation
         self._indicator_service = indicator_service
+        self._grid_builder = grid_builder
         self._gate1 = gate1
         self._gate3 = gate3
         self._notifier = notifier
@@ -72,17 +75,7 @@ class RunWeeklyFullAssessment(BaseChecker):
     ) -> tuple[ProposedGridParams, GateResult]:
         candles = await self._market_data.get_candles(symbol, interval, limit=limit)
         indicators = self._indicator_service.compute(candles, interval)
-
-        proposal = ProposedGridParams(
-            symbol=symbol,
-            trend=Trend.LONG,
-            grid_type=self._settings.decision_engine.default_grid_type,
-            top=indicators.swing_high_14d,
-            bottom=indicators.swing_low_14d,
-            grid_levels=self._settings.decision_engine.default_grid_rows,
-            leverage=self._settings.decision_engine.default_leverage,
-            quote_investment=self._settings.decision_engine.default_quote_investment,
-        )
+        proposal = self._grid_builder.build(symbol, indicators)
         result = self._gate1.assess(indicators, proposal)
 
         return proposal, result
