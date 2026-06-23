@@ -3,7 +3,8 @@ from contextlib import AbstractAsyncContextManager
 from datetime import datetime
 
 from source.constants import MIN_SNAPSHOTS_LENGTH
-from source.domain.entities import FundingOiSnapshot, Symbol
+from source.domain.entities import FundingOiSnapshot
+from source.domain.value_objects import Symbol
 from source.infrastructure.database.repositories.oi_repository import SnapshotRepository
 
 

@@ -1,7 +1,8 @@
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 
-from source.domain.entities import DecisionVerdict, Symbol
+from source.domain.entities import DecisionVerdict
+from source.domain.value_objects import Symbol
 from source.infrastructure.database.repositories.decision_repository import DecisionLogRepository
 
 

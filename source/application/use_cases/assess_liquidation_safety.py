@@ -1,46 +1,35 @@
-from source.domain.entities import (
-    Gate,
-    GateResult,
-    GateStatus,
-    LiquidationEstimate,
-)
+from source.domain.entities import GateResult, LiquidationEstimate
+from source.domain.value_objects import Gate, GateStatus
 from source.settings import DecisionEngineSettings
 
 
 class AssessLiquidationSafety:
-    """Gate 3 — Liquidation safety (§6).
-
-    LiquidationEstimate must be freshly obtained from checkParams immediately
-    before this gate runs — its values are price-dependent and go stale fast.
-    """
-
     def __init__(self, settings: DecisionEngineSettings) -> None:
-        self._s = settings
+        self._settings: DecisionEngineSettings = settings
 
     def assess(self, estimate: LiquidationEstimate) -> GateResult:
         reasons: list[str] = []
         fail = False
 
-        # Upper liquidation buffer
         if (
             estimate.buffer_multiplier_up is not None
-            and estimate.buffer_multiplier_up < self._s.liq_buffer_multiplier_min
+            and estimate.buffer_multiplier_up < self._settings.liq_buffer_multiplier_min
         ):
             fail = True
             reasons.append(
                 f"Upper liq buffer {estimate.buffer_multiplier_up:.2f}x "
-                f"below minimum {self._s.liq_buffer_multiplier_min}x"
+                f"below minimum {self._settings.liq_buffer_multiplier_min}x"
             )
 
         # Lower liquidation buffer
         if (
             estimate.buffer_multiplier_down is not None
-            and estimate.buffer_multiplier_down < self._s.liq_buffer_multiplier_min
+            and estimate.buffer_multiplier_down < self._settings.liq_buffer_multiplier_min
         ):
             fail = True
             reasons.append(
                 f"Lower liq buffer {estimate.buffer_multiplier_down:.2f}x "
-                f"below minimum {self._s.liq_buffer_multiplier_min}x"
+                f"below minimum {self._settings.liq_buffer_multiplier_min}x"
             )
 
         return GateResult(

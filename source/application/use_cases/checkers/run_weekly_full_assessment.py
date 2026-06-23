@@ -8,7 +8,8 @@ from source.application.use_cases.assess_liquidation_safety import AssessLiquida
 from source.application.use_cases.assess_market_regime import AssessMarketRegime
 from source.application.use_cases.assess_positioning import AssessPositioning
 from source.application.use_cases.checkers.base import BaseChecker
-from source.domain.entities import DecisionVerdict, GateResult, GateStatus, ProposedGridParams, Symbol, VerdictAction
+from source.domain.entities import DecisionVerdict, GateResult, ProposedGridParams
+from source.domain.value_objects import GateStatus, Symbol, Trend, VerdictAction
 from source.settings import Settings
 
 
@@ -48,7 +49,7 @@ class RunWeeklyFullAssessment(BaseChecker):
         )
         gate2_result, _ = await self.check_second_gate(symbol, now, is_save=False)
 
-        liq_estimate = await self._grid_validation.check_params(proposal)
+        liq_estimate = await self._grid_validation.check_grid_params(proposal)
         gate3_result = self._gate3.assess(liq_estimate)
 
         verdict = self._resolve(
@@ -69,10 +70,13 @@ class RunWeeklyFullAssessment(BaseChecker):
         interval: str,
         limit: int,
     ) -> tuple[ProposedGridParams, GateResult]:
-        klines = await self._market_data.get_klines(symbol, interval, limit=limit)
-        indicators = self._indicator_service.compute(klines, interval)
+        candles = await self._market_data.get_candles(symbol, interval, limit=limit)
+        indicators = self._indicator_service.compute(candles, interval)
 
         proposal = ProposedGridParams(
+            symbol=symbol,
+            trend=Trend.LONG,
+            grid_type=self._settings.decision_engine.default_grid_type,
             top=indicators.swing_high_14d,
             bottom=indicators.swing_low_14d,
             grid_levels=self._settings.decision_engine.default_grid_rows,

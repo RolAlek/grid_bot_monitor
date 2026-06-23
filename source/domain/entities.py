@@ -94,12 +94,12 @@ class FundingOiSnapshot:
 
 
 @dataclass(frozen=True)
-class Kline:
+class Candle:
     time: datetime
     open: float
+    close: float
     high: float
     low: float
-    close: float
     volume: float
 
 
@@ -111,7 +111,7 @@ class FundingRate:
 
 @dataclass(frozen=True)
 class OpenInterest:
-    symbol: str
+    symbol: Symbol
     open_interest: float
 
 

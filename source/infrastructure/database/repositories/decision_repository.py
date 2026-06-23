@@ -5,7 +5,8 @@ from typing import Protocol
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from source.domain.entities import DecisionVerdict, GateResult, Symbol, VerdictAction
+from source.domain.entities import DecisionVerdict, GateResult
+from source.domain.value_objects import Symbol, VerdictAction
 from source.infrastructure.database.models import DecisionLog
 
 

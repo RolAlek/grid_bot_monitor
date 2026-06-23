@@ -3,7 +3,7 @@ from typing import Any
 from sqlalchemy import CheckConstraint, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from source.domain.entities import VerdictAction
+from source.domain.value_objects import VerdictAction
 from source.infrastructure.database.models.base import Base
 from source.infrastructure.database.models.types import JSONType, _symbol
 

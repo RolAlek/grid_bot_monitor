@@ -4,7 +4,8 @@ from source.application.ports import MarketDataPort
 from source.application.services.oi_snapshot_service import OISnapshotService
 from source.application.use_cases.assess_positioning import AssessPositioning
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
-from source.domain.entities import FundingOiSnapshot, GateResult, Symbol
+from source.domain.entities import FundingOiSnapshot, GateResult
+from source.domain.value_objects import Symbol
 
 
 class BaseChecker:
@@ -14,7 +15,11 @@ class BaseChecker:
         self._oi_service = oi_service
 
     async def check_second_gate(
-        self, symbol: Symbol, now: datetime, *, is_save: bool
+        self,
+        symbol: Symbol,
+        now: datetime,
+        *,
+        is_save: bool,
     ) -> tuple[GateResult, FundingOiSnapshot]:
         oi = await self._market_data.get_open_interest(symbol)
         funding_rows = await self._market_data.get_funding_rates(symbol, limit=1)

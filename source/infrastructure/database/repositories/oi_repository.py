@@ -5,7 +5,8 @@ from typing import Protocol
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from source.domain.entities import FundingOiSnapshot, Symbol
+from source.domain.entities import FundingOiSnapshot
+from source.domain.value_objects import Symbol
 from source.infrastructure.database.models.models import OISnapshot
 
 

@@ -4,7 +4,7 @@ from functools import lru_cache
 from pydantic import HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from source.domain.value_objects import Symbol
+from source.domain.value_objects import GridType, Symbol
 
 
 class _BaseSettings(BaseSettings):
@@ -49,6 +49,7 @@ class DecisionEngineSettings(_BaseSettings):
     default_grid_rows: int = 50
     default_leverage: int = 3
     default_quote_investment: float = 1_000.0
+    default_grid_type: GridType = GridType.GEOMETRIC
 
 
 class DatabaseSettings(_BaseSettings):
