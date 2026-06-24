@@ -85,7 +85,7 @@ class GetCandlesResponseSchema(SuccessResponse[CandleDataObject]): ...
 
 
 class RateItem(BaseSchema):
-    funding_rate: str = Field(alias="fundingRate")
+    funding_rate: float = Field(alias="fundingRate")
     funding_time: int = Field(alias="fundingTime")
 
 

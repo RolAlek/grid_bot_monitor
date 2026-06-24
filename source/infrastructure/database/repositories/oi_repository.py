@@ -15,7 +15,7 @@ class SnapshotRepository(Protocol):
     async def get_oi_snapshots_last_7d(self, symbol: Symbol, as_of: datetime) -> list[FundingOiSnapshot]: ...
 
     @abstractmethod
-    async def save_snapshot(self, snapshot: FundingOiSnapshot) -> None: ...
+    async def save_snapshot(self, snapshot_data: FundingOiSnapshot) -> None: ...
 
 
 class SQLAlchemySnapshotRepository(SnapshotRepository):
@@ -45,3 +45,14 @@ class SQLAlchemySnapshotRepository(SnapshotRepository):
             )
             for snapshot in results
         ]
+
+    async def save_snapshot(self, snapshot_data: FundingOiSnapshot) -> None:
+        obj = OISnapshot(
+            symbol=snapshot_data.symbol.value,
+            funding_rate_last=snapshot_data.funding_rate_last,
+            funding_rate_annualized_pct=snapshot_data.funding_rate_annualized_pct,
+            open_interest=snapshot_data.open_interest,
+            oi_pct_change_7d=snapshot_data.oi_pct_change_7d,
+        )
+        self._session.add(obj)
+        await self._session.commit()

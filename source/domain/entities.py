@@ -105,7 +105,7 @@ class Candle:
 
 @dataclass(frozen=True)
 class FundingRate:
-    rate: str
+    rate: float
     time: datetime
 
 
