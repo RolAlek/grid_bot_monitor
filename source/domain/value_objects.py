@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
 
 
@@ -44,3 +45,10 @@ class Symbol(StrEnum):
     @property
     def get_type(self) -> str:
         return self.split("_")[2]
+
+
+@dataclass(frozen=True)
+class GateRule:
+    triggered: bool
+    status: GateStatus
+    message: str
