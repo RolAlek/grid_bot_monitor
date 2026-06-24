@@ -39,7 +39,6 @@ class SQLAlchemySnapshotRepository(SnapshotRepository):
                 symbol=Symbol(snapshot.symbol),
                 as_of=snapshot.created_at,
                 funding_rate_last=snapshot.funding_rate_last,
-                funding_rate_annualized_pct=snapshot.funding_rate_annualized_pct,
                 open_interest=snapshot.open_interest,
                 oi_pct_change_7d=snapshot.oi_pct_change_7d,
             )
