@@ -39,7 +39,7 @@ class RunWeeklyFullAssessment:
 
         verdict = self._resolve(
             symbol=symbol,
-            gates=[first_gate_result, second_gate_result, third_gate_result],
+            gates=gates,
             proposal=proposal,
             notes="weekly full assessment",
         )

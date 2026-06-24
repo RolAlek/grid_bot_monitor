@@ -5,11 +5,12 @@ from source.domain.entities import (
     Candle,
     DecisionVerdict,
     FundingRate,
+    GateResult,
     LiquidationEstimate,
     OpenInterest,
     ProposedGridParams,
 )
-from source.domain.value_objects import Symbol
+from source.domain.value_objects import GateStatus, Symbol
 
 
 class MarketDataPort(Protocol):
@@ -34,7 +35,7 @@ class MarketDataPort(Protocol):
 
 class NotifierPort(Protocol):
     @abstractmethod
-    async def send_alert(self, message: str) -> None: ...
+    async def send_alert(self, result: GateResult, prev_status: GateStatus | None) -> None: ...
 
     @abstractmethod
     async def send_digest(self, verdict: DecisionVerdict) -> None: ...

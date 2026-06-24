@@ -8,16 +8,6 @@ from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
 from source.settings import Settings
 
 
-ALERT_EMOJI = {"PASS": "🟢", "CAUTION": "🟡", "FAIL": "🔴"}
-ALERT_TEMPLATE = (
-    "{emoji} Gate status change — Positioning (Gate 2)\n"
-    "Funding: {funding_rate:.1f}% annualized ({direction})\n"
-    "OI 7d change: {oi_change}\n"
-    "Previous: {prev_status} → Now: {current_status}\n"
-    "No action taken — informational only."
-)
-
-
 class RunDailyPositioningCheck:
     def __init__(
         self,
@@ -60,8 +50,7 @@ class RunDailyPositioningCheck:
         prev_status = await self._previous_gate2_status(symbol)
 
         if result.status != prev_status:
-            alert = self._format_alert(result, prev_status)
-            await self._notifier.send_alert(alert)
+            await self._notifier.send_alert(result, prev_status)
 
     async def _previous_gate2_status(self, symbol: Symbol) -> GateStatus | None:
         last = await self._decision_service.get_last_decision(symbol)
@@ -73,28 +62,6 @@ class RunDailyPositioningCheck:
                 return gate.status
 
         return None
-
-    @staticmethod
-    def _format_alert(
-        result: GateResult,
-        prev_status: GateStatus | None,
-    ) -> str:
-        funding = result.raw_values["funding_rate_annualized_pct"]
-        oi_change = result.raw_values["oi_pct_change_7d"]
-
-        direction = "long" if funding > 0 else "short"
-        oi_str = f"{oi_change:.1f}%" if oi_change is not None else "insufficient history"
-        prev_str = prev_status.name if prev_status is not None else "NONE"
-        emoji = ALERT_EMOJI.get(result.status.name, "⚪")
-
-        return ALERT_TEMPLATE.format(
-            emoji=emoji,
-            funding_rate=funding,
-            direction=direction,
-            oi_change=oi_str,
-            prev_status=prev_str,
-            current_status=result.status.name,
-        )
 
     @staticmethod
     def _resolve_action(status: GateStatus) -> VerdictAction:
