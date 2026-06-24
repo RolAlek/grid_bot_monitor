@@ -53,6 +53,10 @@ disable_error_code = [
     "return-value",
 ]
 
+[[tool.mypy.overrides]]
+module = "apscheduler.*"
+ignore_missing_imports = true
+
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
