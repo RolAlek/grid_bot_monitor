@@ -1,25 +1,26 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+from typing import Protocol
 
-from source.domain.value_objects import (
+from source.domain.entities import (
+    Candle,
     DecisionVerdict,
     FundingRate,
-    IndexPrice,
-    Kline,
+    GateResult,
     LiquidationEstimate,
     OpenInterest,
     ProposedGridParams,
-    Symbol,
 )
+from source.domain.value_objects import GateStatus, Symbol
 
 
-class MarketDataPort(ABC):
+class MarketDataPort(Protocol):
     @abstractmethod
-    async def get_klines(
+    async def get_candles(
         self,
         symbol: Symbol,
         interval: str,
         limit: int,
-    ) -> list[Kline]: ...
+    ) -> list[Candle]: ...
 
     @abstractmethod
     async def get_funding_rates(
@@ -31,18 +32,15 @@ class MarketDataPort(ABC):
     @abstractmethod
     async def get_open_interest(self, symbol: Symbol) -> OpenInterest: ...
 
-    @abstractmethod
-    async def get_index_prices(self, symbol: Symbol) -> IndexPrice: ...
 
-
-class NotifierPort(ABC):
+class NotifierPort(Protocol):
     @abstractmethod
-    async def send_alert(self, message: str) -> None: ...
+    async def send_alert(self, result: GateResult, prev_status: GateStatus | None) -> None: ...
 
     @abstractmethod
     async def send_digest(self, verdict: DecisionVerdict) -> None: ...
 
 
-class GridValidationPort(ABC):
+class GridValidationPort(Protocol):
     @abstractmethod
-    async def check_params(self, params: ProposedGridParams) -> LiquidationEstimate: ...
+    async def check_grid_params(self, params: ProposedGridParams) -> LiquidationEstimate: ...

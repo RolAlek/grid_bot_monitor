@@ -1,0 +1,44 @@
+fix = true
+unsafe-fixes = true
+line-length = 120
+preview = true
+target-version = "py312"
+
+[lint]
+select = [ "ALL" ]
+ignore = [
+  "CPY",      # Ignore copyright notice checks in Python files
+  "FBT001",   # Ignore specific flake8-bugbear warning
+  "D",        # Ignore all docstring-related rules
+  "ISC001",   # Ignore implicit string concatenation (conflicts with Ruff formatter)
+  "PLR6301",  # Do not enforce @classmethod/@staticmethod when `self` is not used
+  "TRY003",   # Ensure `raise` within try block uses `raise from` or `raise e`
+  "TRY004",   # Avoid using bare `except`
+  "TRY300",   # Prefer `contextlib.suppress` over try-except-pass
+  "EM101",    # Ignore string formatting issues in exception messages
+  "EM102",    # Ignore error message formatting
+  "ANN401",   # Ignore dynamically typed annotations (`Any`)
+  "BLE001",   # Ignore `blind except` rule
+  "G004",     # Ignore specific Pylint rule (possibly related to global variables)
+  "FAST002",
+  "TRY301",
+  "COM812",
+  "PLR0913",
+  "PLR0917",
+  "TC006",
+  "TC004",
+  "TC003",
+  "TC001",
+  "TC002",
+  "TC005",
+]
+
+[lint.per-file-ignores]
+"**/alembic/*" = ["ALL"]
+
+[lint.isort]
+combine-as-imports = true
+lines-after-imports = 2
+
+[format]
+quote-style = "double"

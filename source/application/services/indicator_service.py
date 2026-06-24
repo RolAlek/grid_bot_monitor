@@ -1,20 +1,18 @@
 import math
 from dataclasses import asdict
 from math import sqrt
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
 
-from source.application.exceptions import (
-    InsufficientKlineDataError,
-    UnsupportedIntervalError,
-)
-from source.domain.value_objects import IndicatorSet, Kline
+from source.application.exceptions import InsufficientKlineDataError, UnsupportedIntervalError
+from source.domain.entities import Candle, IndicatorSet
 
 
 class IndicatorService:
-    _INTERVAL_CANDLES_PER_DAY: dict[str, int] = {
+    _INTERVAL_CANDLES_PER_DAY: ClassVar[dict[str, int]] = {
         "1H": 24,
         "2H": 12,
         "4H": 6,
@@ -25,11 +23,9 @@ class IndicatorService:
     }
     _MIN_LOOKBACK_DAYS = 31
 
-    def compute(self, klines: list[Kline], interval: str) -> IndicatorSet:
+    def compute(self, klines: list[Candle], interval: str) -> IndicatorSet:
         if interval not in self._INTERVAL_CANDLES_PER_DAY:
-            raise UnsupportedIntervalError(
-                f"No candles-per-day mapping for interval={interval!r}"
-            )
+            raise UnsupportedIntervalError(f"No candles-per-day mapping for interval={interval!r}")
 
         candles_pd = self._INTERVAL_CANDLES_PER_DAY[interval]
 
@@ -82,7 +78,7 @@ class IndicatorService:
         return result
 
     @staticmethod
-    def _convert_to_dataframe(klines: list[Kline]) -> pd.DataFrame:
+    def _convert_to_dataframe(klines: list[Candle]) -> pd.DataFrame:
         dataframe = pd.DataFrame([asdict(kline) for kline in klines])
         dataframe = dataframe.sort_values("time").reset_index(drop=True)
 
@@ -100,10 +96,8 @@ class IndicatorService:
         return macd_val, macd_signal
 
     @staticmethod
-    def _calculate_volatilities(dataframe: pd.DataFrame, candles_pd: int, period: int):
-        log_returns = np.log(
-            dataframe["close"].to_numpy() / dataframe["close"].shift(1).to_numpy()
-        )[1:]
+    def _calculate_volatilities(dataframe: pd.DataFrame, candles_pd: int, period: int) -> float:
+        log_returns = np.log(dataframe["close"].to_numpy() / dataframe["close"].shift(1).to_numpy())[1:]
         ann = sqrt(365 * candles_pd)
         return float(np.std(log_returns[-(period * candles_pd) :]) * ann)
 
