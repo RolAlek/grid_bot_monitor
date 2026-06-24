@@ -3,9 +3,9 @@ import logging
 from source.application.ports import MarketDataPort
 from source.application.services.grid_builder import GridProposalBuilder
 from source.application.services.indicator_service import IndicatorService
-from source.domain.check_regime_rules import build_market_regime_checks
-from source.domain.entities import Candle, GateResult, IndicatorSet
-from source.domain.utils import evaluate_checks
+from source.application.use_cases.check_regime_rules import build_market_regime_checks
+from source.application.utils import evaluate_checks
+from source.domain.entities import Candle, GateResult, IndicatorSet, ProposedGridParams
 from source.domain.value_objects import Gate, Symbol
 from source.settings import Settings
 
@@ -26,7 +26,7 @@ class AssessMarketRegimeService:
         self._indicator_service = indicator_service
         self._grid_builder = grid_builder
 
-    async def execute(self, symbol: Symbol) -> GateResult:
+    async def execute(self, symbol: Symbol) -> tuple[GateResult, ProposedGridParams]:
         candles = await self._fetch_candles(symbol)
         indicators = self._build_indicators_with_candles(candles)
         proposal = self._grid_builder.build(symbol, indicators)
@@ -37,7 +37,7 @@ class AssessMarketRegimeService:
         )
         statuses, reasons = evaluate_checks(checks)
 
-        return GateResult(
+        verdict = GateResult(
             gate=Gate.REGIME_RANGE_FIT,
             status=statuses,
             reasons=reasons,
@@ -53,6 +53,8 @@ class AssessMarketRegimeService:
                 "realized_vol_30d": indicators.realized_vol_30d,
             },
         )
+
+        return verdict, proposal
 
     async def _fetch_candles(self, symbol: Symbol) -> list[Candle]:
         try:
