@@ -5,7 +5,8 @@ from source.application.services.grid_builder import GridProposalBuilder
 from source.application.services.indicator_service import IndicatorService
 from source.domain.check_regime_rules import build_market_regime_checks
 from source.domain.entities import Candle, GateResult, IndicatorSet
-from source.domain.value_objects import Gate, GateRule, GateStatus, Symbol
+from source.domain.utils import evaluate_checks
+from source.domain.value_objects import Gate, Symbol
 from source.settings import Settings
 
 
@@ -34,12 +35,12 @@ class AssessMarketRegimeService:
             proposal=proposal,
             settings=self._settings.decision_engine,
         )
-        statuses, reasons = self._evaluate_checks(checks)
+        statuses, reasons = evaluate_checks(checks)
 
         return GateResult(
             gate=Gate.REGIME_RANGE_FIT,
-            status=max(statuses),
-            reasons=tuple(reasons),
+            status=statuses,
+            reasons=reasons,
             raw_values={
                 "adx14": indicators.adx14,
                 "atr14": indicators.atr14,
@@ -76,10 +77,3 @@ class AssessMarketRegimeService:
                 extra={"candles": candles, "interval": interval},
             )
             raise
-
-    @staticmethod
-    def _evaluate_checks(checks: list[GateRule]) -> tuple[list[GateStatus], list[str]]:
-        statuses = [GateStatus.PASS] + [check.status for check in checks if check.triggered]
-        reasons = [check.message for check in checks if check.triggered]
-
-        return statuses, reasons

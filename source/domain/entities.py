@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from source.constants import FUNDING_ANNUALIZATION_FACTOR
 from source.domain.value_objects import Gate, GateStatus, GridType, Symbol, Trend, VerdictAction
 
 
@@ -88,9 +89,12 @@ class FundingOiSnapshot:
     symbol: Symbol
     as_of: datetime
     funding_rate_last: float
-    funding_rate_annualized_pct: float
     open_interest: float
     oi_pct_change_7d: float | None  # None until 7 days of stored history exist
+
+    @property
+    def funding_rate_annualized_pct(self) -> float:
+        return self.funding_rate_last * FUNDING_ANNUALIZATION_FACTOR
 
 
 @dataclass(frozen=True)
