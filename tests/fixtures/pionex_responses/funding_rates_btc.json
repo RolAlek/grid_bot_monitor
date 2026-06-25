@@ -1,0 +1,89 @@
+{
+  "result": true,
+  "timestamp": 1748995200000,
+  "data": {
+    "symbol": "USDT_BTC_REPR",
+    "rates": [
+      {
+        "fundingRate": 0.0001,
+        "fundingTime": 1748995200000
+      },
+      {
+        "fundingRate": 0.00011,
+        "fundingTime": 1749024000000
+      },
+      {
+        "fundingRate": 0.00012,
+        "fundingTime": 1749052800000
+      },
+      {
+        "fundingRate": 0.00013000000000000002,
+        "fundingTime": 1749081600000
+      },
+      {
+        "fundingRate": 0.00014000000000000001,
+        "fundingTime": 1749110400000
+      },
+      {
+        "fundingRate": 0.00015000000000000001,
+        "fundingTime": 1749139200000
+      },
+      {
+        "fundingRate": 0.00016,
+        "fundingTime": 1749168000000
+      },
+      {
+        "fundingRate": 0.00017,
+        "fundingTime": 1749196800000
+      },
+      {
+        "fundingRate": 0.00018,
+        "fundingTime": 1749225600000
+      },
+      {
+        "fundingRate": 0.00019,
+        "fundingTime": 1749254400000
+      },
+      {
+        "fundingRate": 0.0002,
+        "fundingTime": 1749283200000
+      },
+      {
+        "fundingRate": 0.00021,
+        "fundingTime": 1749312000000
+      },
+      {
+        "fundingRate": 0.00022000000000000003,
+        "fundingTime": 1749340800000
+      },
+      {
+        "fundingRate": 0.00023,
+        "fundingTime": 1749369600000
+      },
+      {
+        "fundingRate": 0.00024000000000000003,
+        "fundingTime": 1749398400000
+      },
+      {
+        "fundingRate": 0.00025,
+        "fundingTime": 1749427200000
+      },
+      {
+        "fundingRate": 0.00026000000000000003,
+        "fundingTime": 1749456000000
+      },
+      {
+        "fundingRate": 0.00027,
+        "fundingTime": 1749484800000
+      },
+      {
+        "fundingRate": 0.00028000000000000003,
+        "fundingTime": 1749513600000
+      },
+      {
+        "fundingRate": 0.00029,
+        "fundingTime": 1749542400000
+      }
+    ]
+  }
+}
