@@ -1,0 +1,11 @@
+{
+  "result": true,
+  "timestamp": 1748995200000,
+  "data": {
+    "minInvestment": null,
+    "estimateLiquidationPriceUp": "0",
+    "estimateLiquidationPriceDown": "75000.0",
+    "estimateLiquidationPriceUpStr": "0",
+    "estimateLiquidationPriceDownStr": "75000.0"
+  }
+}

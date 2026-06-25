@@ -1,0 +1,6 @@
+{
+  "result": false,
+  "timestamp": 1748995200000,
+  "code": "PARAMS_ERROR",
+  "message": "less than min investment"
+}
