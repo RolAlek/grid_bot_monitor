@@ -1,11 +1,16 @@
 from datetime import UTC, datetime
 
+import structlog
+
 from source.application.ports import NotifierPort
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.gates.assess_positioning_second_gate import AssessPositioningService
 from source.domain.entities import DecisionVerdict, GateResult
 from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
 from source.settings import Settings
+
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class RunDailyPositioningCheck:
@@ -23,7 +28,14 @@ class RunDailyPositioningCheck:
 
     async def run(self) -> GateResult:
         symbol = self._settings.pionex.symbol
+        logger.info("Daily positioning check started", symbol=symbol.value)
+
         second_gate_result = await self._second_gate.execute(symbol)
+        logger.info(
+            "Gate 2 result",
+            status=second_gate_result.status.name,
+            reasons=list(second_gate_result.reasons),
+        )
 
         await self._send_alert(symbol, second_gate_result)
 
@@ -50,6 +62,11 @@ class RunDailyPositioningCheck:
         prev_status = await self._previous_gate2_status(symbol)
 
         if result.status != prev_status:
+            logger.info(
+                "Positioning status changed — alert sent",
+                prev=prev_status.name if prev_status else None,
+                now=result.status.name,
+            )
             await self._notifier.send_alert(result, prev_status)
 
     async def _previous_gate2_status(self, symbol: Symbol) -> GateStatus | None:

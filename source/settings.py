@@ -1,10 +1,21 @@
 from dataclasses import dataclass, field
+from enum import StrEnum
 from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
-from pydantic import HttpUrl
+from pydantic import HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from source.domain.value_objects import GridType, Symbol
+
+
+class LogLevel(StrEnum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    FATAL = "FATAL"
 
 
 class _BaseSettings(BaseSettings):
@@ -16,10 +27,24 @@ class _BaseSettings(BaseSettings):
     )
 
 
+class AppSettings(_BaseSettings):
+    log_level: LogLevel = LogLevel.DEBUG
+    log_json: bool = True
+    log_dir: Path = Path("logs")
+    log_file_days: int = 3
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def normalize(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.upper()
+        return value
+
+
 class PionexSettings(_BaseSettings):
     base_url: HttpUrl = HttpUrl("https://api.pionex.com")
-    api_key: str
-    api_secret: str
+    api_key: SecretStr
+    api_secret: SecretStr
     timeout: float = 10
 
     symbol: Symbol = Symbol.BTC
@@ -68,11 +93,18 @@ class DatabaseSettings(_BaseSettings):
         return self.url.format(self.name)
 
 
+class TelegramSettings(_BaseSettings):
+    token: SecretStr
+    chat_id: str
+
+
 @dataclass(frozen=True)
 class Settings:
+    app: AppSettings = field(default_factory=AppSettings)
     pionex: PionexSettings = field(default_factory=PionexSettings)
     decision_engine: DecisionEngineSettings = field(default_factory=DecisionEngineSettings)
     database: DatabaseSettings = field(default_factory=DatabaseSettings)
+    telegram: TelegramSettings = field(default_factory=TelegramSettings)
 
 
 @lru_cache(maxsize=1, typed=True)

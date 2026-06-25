@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from source.domain.entities import FundingOiSnapshot
 from source.domain.value_objects import Symbol
 from source.infrastructure.database.models.models import OISnapshot
+from source.infrastructure.database.repositories.base import AbstractSQLAlchemyRepository
 
 
 class SnapshotRepository(Protocol):
@@ -18,7 +19,7 @@ class SnapshotRepository(Protocol):
     async def save_snapshot(self, snapshot_data: FundingOiSnapshot) -> None: ...
 
 
-class SQLAlchemySnapshotRepository(SnapshotRepository):
+class SQLAlchemySnapshotRepository(AbstractSQLAlchemyRepository, SnapshotRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

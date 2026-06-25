@@ -1,4 +1,4 @@
-import logging
+import structlog
 
 from source.application.ports import MarketDataPort
 from source.application.services.grid_builder import GridProposalBuilder
@@ -10,7 +10,7 @@ from source.domain.value_objects import Gate, Symbol
 from source.settings import Settings
 
 
-logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class AssessMarketRegimeService:
@@ -63,8 +63,8 @@ class AssessMarketRegimeService:
                 interval=self._settings.pionex.kline_interval,
                 limit=self._settings.pionex.limit,
             )
-        except Exception as exc:
-            logger.critical("Fetched market data was failed", exc_info=exc)
+        except Exception:
+            logger.exception("Failed to fetch market data", symbol=symbol.value)
             raise
 
     def _build_indicators_with_candles(self, candles: list[Candle]) -> IndicatorSet:
@@ -72,10 +72,10 @@ class AssessMarketRegimeService:
 
         try:
             return self._indicator_service.compute(candles, interval)
-        except Exception as exc:
-            logger.critical(
-                "An error occurred while trying to build indicators",
-                exc_info=exc,
-                extra={"candles": candles, "interval": interval},
+        except Exception:
+            logger.exception(
+                "Failed to build indicators",
+                candle_count=len(candles),
+                interval=interval,
             )
             raise

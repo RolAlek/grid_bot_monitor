@@ -14,7 +14,7 @@ class CustomPionexAuth(Auth):
 
     async def async_auth_flow(self, request: Request) -> AsyncGenerator[Request, Response]:
         if request.url.path == "/api/v1/bot/orders/futuresGrid/checkParams":
-            request.headers["PIONEX-KEY"] = self._settings.api_key
+            request.headers["PIONEX-KEY"] = self._settings.api_key.get_secret_value()
             request.headers["PIONEX-SIGNATURE"] = self._generate_signature(request)
 
         yield request
@@ -23,7 +23,7 @@ class CustomPionexAuth(Auth):
         prehash = request.method.upper().encode("utf-8") + request.content + request.url.raw_path
 
         return hmac.new(
-            key=self._settings.api_secret.encode("utf-8"),
+            key=self._settings.api_secret.get_secret_value().encode("utf-8"),
             msg=prehash,
             digestmod=hashlib.sha256,
         ).hexdigest()

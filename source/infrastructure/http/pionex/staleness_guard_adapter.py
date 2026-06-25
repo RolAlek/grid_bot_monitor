@@ -10,7 +10,7 @@ class StalenessGuardAdapter(GridValidationPort):
         self._ttl = ttl_seconds
         self._cache: dict[ProposedGridParams, tuple[datetime, LiquidationEstimate]] = {}
 
-    async def check_params(self, params: ProposedGridParams) -> LiquidationEstimate:
+    async def check_grid_params(self, params: ProposedGridParams) -> LiquidationEstimate:
         now = datetime.now(UTC)
 
         if exist := self._cache.get(params):
