@@ -6,7 +6,7 @@ from source.settings import get_settings
 settings = get_settings()
 
 engine: AsyncEngine = create_async_engine(
-    url=settings.database.url,
+    url=settings.database.connection_url,
     echo=settings.database.echo,
 )
 async_session_factory = async_sessionmaker(

@@ -1,3 +1,4 @@
+import html
 from types import MappingProxyType
 from typing import ClassVar
 
@@ -9,7 +10,7 @@ from source.domain.value_objects import GateStatus, VerdictAction
 
 
 ALERT_TEMPLATE = (
-    "{emoji} Gate status change — Positioning (Gate 2)\n"
+    "{emoji} Gate status change — Positioning (Gate 2)\n\n"
     "Funding: {funding_rate:.1f}% annualized ({direction})\n"
     "OI 7d change: {oi_change}\n"
     "Previous: {prev_status} → Now: {current_status}\n"
@@ -35,33 +36,39 @@ class AiogramNotifier(NotifierPort):
         self._chat_id = chat_id
 
     async def send_alert(self, result: GateResult, prev_status: GateStatus | None) -> None:
-        await self._bot.send_message(chat_id=self._chat_id, text=self._format_alert(result, prev_status))
+        await self._bot.send_message(
+            chat_id=self._chat_id,
+            text=self._format_alert(result, prev_status),
+            parse_mode="HTML",
+        )
 
     async def send_digest(self, verdict: DecisionVerdict) -> None:
-        await self._bot.send_message(chat_id=self._chat_id, text=self._format_digest(verdict))
+        await self._bot.send_message(chat_id=self._chat_id, text=self._format_digest(verdict), parse_mode="HTML")
 
     def _format_digest(self, verdict: DecisionVerdict) -> str:
-        emoji = self._VERDICT_EMOJI.get(verdict.action, "⚪")
+        verdict_emoji = self._VERDICT_EMOJI.get(verdict.action, "⚪")
+        symbol = html.escape(str(verdict.symbol))
+        action = verdict.action.value.upper()
 
-        lines = [
-            f"{emoji} Weekly launch assessment — {verdict.symbol}. Verdict: {verdict.action.value.upper()}",
-        ]
+        sections = [f"{verdict_emoji} <b>Weekly Launch Assessment</b>\n\n<b>{symbol}</b> · Verdict: <b>{action}</b>"]
 
+        gate_lines = []
         for gate in verdict.gates:
             gate_emoji = self._STATUS_EMOJI.get(gate.status, "⚪")
-            reason = gate.reasons[0] if gate.reasons else "ok"
-            lines.append(f"Gate ({gate.gate.name}): {gate_emoji} {gate.status.name} — {reason}")
+            gate_lines.append(f"{gate_emoji} <b>{gate.gate.name}</b> — {gate.status.name}")
+            # all reasons now, not just reasons[0]
+            gate_lines.extend(f"   • {html.escape(reason)}" for reason in gate.reasons)
+        if gate_lines:
+            sections.append("\n".join(gate_lines))
 
-        top = verdict.suggested_grid_top
-        bottom = verdict.suggested_grid_bottom
-        leverage = verdict.suggested_leverage
+        top, bottom, leverage = verdict.suggested_grid_top, verdict.suggested_grid_bottom, verdict.suggested_leverage
         if top is not None and bottom is not None and leverage is not None:
-            lines.append(f"Suggested range: {bottom:,.0f}-{top:,.0f} | Leverage: {leverage}x")
+            sections.append(f"<b>Suggested range:</b> {bottom:,.0f} - {top:,.0f}\n<b>Leverage:</b> {leverage}x")
 
         if verdict.action == VerdictAction.LAUNCH:
-            lines.append("Reply /confirm_launch to proceed — no order has been placed.")
+            sections.append("👉 Reply /confirm_launch to proceed — no order has been placed.")
 
-        return "\n".join(lines)
+        return "\n\n".join(sections)
 
     def _format_alert(
         self,

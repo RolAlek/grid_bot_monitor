@@ -32,7 +32,7 @@ class Trend(StrEnum):
 
 
 class Symbol(StrEnum):
-    BTC = "USDT_BTC_REPR"
+    BTC = "BTC_USDT_PERP"
 
     @property
     def get_quote(self) -> str:
