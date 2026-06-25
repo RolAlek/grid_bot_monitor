@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.domain.entities import DecisionVerdict, GateResult
-from source.domain.value_objects import Symbol, VerdictAction
+from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
 from source.infrastructure.database.models import DecisionLog
 from source.infrastructure.database.repositories.base import AbstractSQLAlchemyRepository
 
@@ -39,7 +39,15 @@ class SQLAlchemyDecisionLogRepository(AbstractSQLAlchemyRepository, DecisionLogR
             symbol=Symbol(result.symbol),
             as_of=result.created_at,
             action=VerdictAction(result.action),
-            gates=tuple(GateResult(**gate) for gate in result.gates_json),
+            gates=tuple(
+                GateResult(
+                    gate=Gate(gate["gate"]),
+                    status=GateStatus(gate["status"]),
+                    reasons=tuple(gate["reasons"]),
+                    raw_values=gate["raw_values"],
+                )
+                for gate in result.gates_json
+            ),
             notes=result.notes,
         )
 

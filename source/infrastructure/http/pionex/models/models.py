@@ -31,11 +31,11 @@ class DataObject(BaseSchema):
     grid_type: GridType
     trend: Trend
     leverage: int = Field(ge=1, le=3)
-    quote_investment: str = Field(gt=0)
+    quote_investment: str
 
     @model_validator(mode="after")
     def validate_top_and_bottom(self) -> Self:
-        if self.top <= self.bottom:
+        if float(self.top) <= float(self.bottom):
             raise ValueError("Top must be greater then bottom")
 
         return self
