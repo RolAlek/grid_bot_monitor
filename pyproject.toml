@@ -18,17 +18,40 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "freezegun>=1.5.5",
+    "hypothesis>=6.155.7",
     "mypy>=2.1.0",
     "pandas-stubs>=3.0.3.260530",
     "pre-commit>=4.6.0",
     "pyclean>=3.7.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "respx>=0.23.1",
     "ruff>=0.15.18",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["source"]
+omit = [
+    "source/presentation/scheduler/*",
+    "source/infrastructure/database/alembic/*",
+    "source/infrastructure/http/pionex/auth_strategy.py",
+    "source/logging_config.py",
+    "source/main.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+    "raise NotImplementedError",
+]
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
