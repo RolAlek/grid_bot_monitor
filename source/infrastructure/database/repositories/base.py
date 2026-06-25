@@ -1,4 +1,8 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class AbstractSQLAlchemyRepository(ABC): ...  # noqa: B024
+class AbstractSQLAlchemyRepository(ABC):
+    @abstractmethod
+    def __init__(self, session: AsyncSession) -> None: ...

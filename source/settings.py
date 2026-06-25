@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from functools import lru_cache
 
-from pydantic import HttpUrl
+from pydantic import HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from source.domain.value_objects import GridType, Symbol
@@ -18,8 +18,8 @@ class _BaseSettings(BaseSettings):
 
 class PionexSettings(_BaseSettings):
     base_url: HttpUrl = HttpUrl("https://api.pionex.com")
-    api_key: str
-    api_secret: str
+    api_key: SecretStr
+    api_secret: SecretStr
     timeout: float = 10
 
     symbol: Symbol = Symbol.BTC
@@ -68,11 +68,17 @@ class DatabaseSettings(_BaseSettings):
         return self.url.format(self.name)
 
 
+class TelegramSettings(_BaseSettings):
+    token: SecretStr
+    chat_id: str
+
+
 @dataclass(frozen=True)
 class Settings:
     pionex: PionexSettings = field(default_factory=PionexSettings)
     decision_engine: DecisionEngineSettings = field(default_factory=DecisionEngineSettings)
     database: DatabaseSettings = field(default_factory=DatabaseSettings)
+    telegram: TelegramSettings = field(default_factory=TelegramSettings)
 
 
 @lru_cache(maxsize=1, typed=True)
