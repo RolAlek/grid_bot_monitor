@@ -89,7 +89,7 @@ def _renderer(*, as_json: bool) -> Any:
     )
 
 
-def configure_logging(settings: AppSettings) -> None:
+def configure_logging(settings: "AppSettings") -> None:
     level_int: int = getattr(logging, str(settings.log_level), logging.INFO)
     pre = _pre_chain()
     remove_meta = structlog.stdlib.ProcessorFormatter.remove_processors_meta
