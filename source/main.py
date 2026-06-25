@@ -1,21 +1,22 @@
 import asyncio
-import logging
 
+import structlog
 from aiogram import Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from source.dependencies import get_daily_runner, get_decision_service, get_telegram_bot, get_weekly_runner
+from source.logging_config import configure_logging
 from source.presentation.bot.handlers.decision_handlers import router_factory
 from source.presentation.scheduler.jobs import register_jobs
 from source.settings import get_settings
 
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 async def main() -> None:
     settings = get_settings()
+    configure_logging(settings.app)
 
     bot = get_telegram_bot()
     dp = Dispatcher()
