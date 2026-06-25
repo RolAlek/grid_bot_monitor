@@ -1,5 +1,4 @@
-import logging
-
+import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -7,7 +6,7 @@ from source.application.services.run_daily_positioning_check import RunDailyPosi
 from source.application.services.run_weekly_full_assessment import RunWeeklyFullAssessment
 
 
-logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 def register_jobs(  # type: ignore[no-any-unimported]

@@ -7,7 +7,7 @@ from source.domain.entities import Candle, FundingRate, LiquidationEstimate, Ope
 from source.domain.exceptions import (
     InvalidCandleDataError,
     InvalidFundingRateDataError,
-    InvalidLiquidationEstimateDatError,
+    InvalidLiquidationEstimateDataError,
     InvalidOpenInterestDataError,
 )
 from source.domain.value_objects import Symbol
@@ -62,7 +62,7 @@ class PionexHTTPClient(BaseHTTPClient):
             raise HttpRequestError(message=response.message or response.code)
 
         if not response.result or not response.data:
-            raise InvalidLiquidationEstimateDatError("Invalid check grid parameters response from Pionex.")
+            raise InvalidLiquidationEstimateDataError("Invalid check grid parameters response from Pionex.")
 
         data = response.data
 

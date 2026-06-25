@@ -1,5 +1,6 @@
-import logging
 from datetime import UTC, datetime
+
+import structlog
 
 from source.application.ports import MarketDataPort
 from source.application.services.oi_snapshot_service import OISnapshotService
@@ -10,7 +11,7 @@ from source.domain.value_objects import Gate, Symbol
 from source.settings import DecisionEngineSettings
 
 
-logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class AssessPositioningService:
@@ -59,7 +60,7 @@ class AssessPositioningService:
             rows.sort(key=lambda rate: rate.time)
             return float(rows[-1].rate)
         except Exception:
-            logger.critical("Failed to pull latest funding rate for %s", symbol.value, exc_info=True)
+            logger.exception("Failed to fetch latest funding rate", symbol=symbol.value)
             raise
 
     async def _pull_latest_oi(self, symbol: Symbol, current_dt: datetime) -> tuple[OpenInterest, float | None]:
@@ -72,5 +73,5 @@ class AssessPositioningService:
             )
             return oi, oi_change
         except Exception:
-            logger.critical("Failed to pull latest oi for %s", symbol.value, exc_info=True)
+            logger.exception("Failed to fetch latest open interest", symbol=symbol.value)
             raise

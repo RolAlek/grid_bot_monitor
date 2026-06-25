@@ -33,10 +33,9 @@ class HttpRequestError(BaseInfrastructureError):
         response_content: Any = None,
         original_error: Exception | None = None,
     ) -> None:
-        super().__init__(message)
+        super().__init__(message, original_error)
         self.status_code = status_code
         self.response_content = response_content
-        self.original_error = original_error
 
 
 class HttpValidationError(HttpRequestError):

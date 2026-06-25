@@ -1,5 +1,4 @@
-import logging
-
+import structlog
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -9,7 +8,7 @@ from source.application.services.run_weekly_full_assessment import RunWeeklyFull
 from source.domain.value_objects import Symbol
 
 
-logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 def router_factory(
@@ -28,8 +27,8 @@ def router_factory(
         try:
             verdict = await weekly_runner.run()
             await message.answer(f"Assessment complete. Verdict: {verdict.action.value.upper()}")
-        except Exception as exc:
-            logger.exception("Assessment failed", exc_info=exc)
+        except Exception:
+            logger.exception("Assessment failed")
             await message.answer("Assessment failed — check logs for details.")
 
     @router.message(Command("verdict"))
