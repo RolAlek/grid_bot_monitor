@@ -22,20 +22,16 @@ from source.infrastructure.http.pionex.models.models import (
     GetFundingRatesResponseSchema,
     GetOpenInterestsResponseSchema,
 )
-from source.settings import PionexSettings
 
 
-class PionexHttpClient(BaseHTTPClient):
+class PionexHTTPClient(BaseHTTPClient):
     def __init__(
         self,
         base_url: str,
         timeout: float | None = None,
         auth: Auth | None = None,
-        *,
-        settings: PionexSettings,
     ) -> None:
         super().__init__(base_url, timeout, auth)
-        self._settings = settings
 
     async def check_grid_params(self, parameters: ProposedGridParams) -> LiquidationEstimate:
         payload = CheckFuturesGridParametersRequestSchema(
@@ -105,13 +101,13 @@ class PionexHttpClient(BaseHTTPClient):
             for candle in response.data.candles
         ]
 
-    async def get_funding_rates(self) -> list[FundingRate]:
+    async def get_funding_rates(self, symbol: Symbol, limit: int) -> list[FundingRate]:
         try:
             response = await self.get(
                 path="/api/v1/market/fundingRates",
                 response_model=GetFundingRatesResponseSchema,
                 error_model=ErrorResponse,
-                params={"symbol": self._settings.symbol, "limit": self._settings.limit},
+                params={"symbol": symbol, "limit": limit},
             )
         except HttpValidationError as error:
             raise InvalidFundingRateDataError(f"Malformed funding rate data from Pionex: {error}", error) from error
@@ -127,7 +123,7 @@ class PionexHttpClient(BaseHTTPClient):
             for rate in response.data.rates
         ]
 
-    async def get_open_interest(self) -> OpenInterest:
+    async def get_open_interest(self, symbol: Symbol) -> OpenInterest:
         response = await self.get(
             path="/api/v1/market/openInterests",
             response_model=GetOpenInterestsResponseSchema,
@@ -141,13 +137,13 @@ class PionexHttpClient(BaseHTTPClient):
             raise InvalidOpenInterestDataError("Empty open interest data response from Pionex")
 
         for oi in response.data.open_interests:
-            if oi.symbol == self._settings.symbol.value:
+            if oi.symbol == symbol.value:
                 if not oi.open_interest:
                     raise InvalidOpenInterestDataError("Empty open interest value from Pionex response")
 
                 return OpenInterest(
-                    symbol=Symbol(oi.symbol) if oi.symbol else self._settings.symbol,
+                    symbol=Symbol(oi.symbol) if oi.symbol else symbol,
                     open_interest=oi.open_interest,
                 )
 
-        raise InvalidOpenInterestDataError(f"No data matching the {self._settings.symbol.value}")
+        raise InvalidOpenInterestDataError(f"No data matching the {symbol.value}")

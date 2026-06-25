@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from source.domain.entities import DecisionVerdict, GateResult
 from source.domain.value_objects import Symbol, VerdictAction
 from source.infrastructure.database.models import DecisionLog
+from source.infrastructure.database.repositories.base import AbstractSQLAlchemyRepository
 
 
 class DecisionLogRepository(Protocol):
@@ -18,7 +19,7 @@ class DecisionLogRepository(Protocol):
     async def save_decision(self, data: DecisionVerdict) -> None: ...
 
 
-class SQLAlchemyDecisionLogRepository(DecisionLogRepository):
+class SQLAlchemyDecisionLogRepository(AbstractSQLAlchemyRepository, DecisionLogRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
