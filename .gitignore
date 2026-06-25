@@ -219,6 +219,7 @@ __marimo__/
 
 # SQLite
 **.db
+data/
 
 # Media and other statics files
 logs/

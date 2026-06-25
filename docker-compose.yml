@@ -1,0 +1,23 @@
+services:
+  migrate:
+    build: .
+    env_file: .env
+    environment:
+      NAME: /data/advisor
+    volumes:
+      - ./data:/data
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    restart: "no"
+
+  bot:
+    build: .
+    env_file: .env
+    environment:
+      NAME: /data/advisor
+    volumes:
+      - ./data:/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully

@@ -10,7 +10,7 @@ from source.domain.value_objects import GateStatus, VerdictAction
 
 
 ALERT_TEMPLATE = (
-    "{emoji} Gate status change — Positioning (Gate 2)\n"
+    "{emoji} Gate status change — Positioning (Gate 2)\n\n"
     "Funding: {funding_rate:.1f}% annualized ({direction})\n"
     "OI 7d change: {oi_change}\n"
     "Previous: {prev_status} → Now: {current_status}\n"
