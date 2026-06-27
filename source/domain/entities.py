@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
-from source.domain.value_objects import Gate, GateStatus, GridType, Symbol, Trend, VerdictAction
+from source.domain.value_objects import Gate, GateStatus, GridLaunchStatus, GridType, Symbol, Trend, VerdictAction
 
 
 @dataclass(frozen=True)
@@ -127,3 +128,22 @@ class OpenInterest:
 @dataclass(frozen=True)
 class IndexPrice:
     pass
+
+
+@dataclass
+class LaunchedGrid:
+    oid: UUID
+    symbol: Symbol
+    top: float
+    bottom: float
+    levels: int
+    trend: Trend
+    grid_type: GridType
+    leverage: float
+    investment: float
+    status: GridLaunchStatus
+    decision_verdict: DecisionVerdict
+
+    created_at: datetime
+    closed_at: datetime | None = None
+    realized_pnl: float | None = None

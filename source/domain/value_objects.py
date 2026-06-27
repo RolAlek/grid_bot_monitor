@@ -31,6 +31,13 @@ class Trend(StrEnum):
     NEUTRAL = "no_trend"
 
 
+class GridLaunchStatus(StrEnum):
+    RUNNING = "running"
+    PAUSED = "paused"
+    CLOSED = "closed"
+    LIQUIDATED = "liquidated"
+
+
 class Symbol(StrEnum):
     BTC = "BTC_USDT_PERP"
 
