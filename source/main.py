@@ -2,6 +2,7 @@ import asyncio
 
 import structlog
 from aiogram import Dispatcher
+from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from source.dependencies import get_daily_runner, get_decision_service, get_telegram_bot, get_weekly_runner
@@ -33,6 +34,12 @@ async def main() -> None:
     scheduler = AsyncIOScheduler()
     register_jobs(scheduler, daily_runner=get_daily_runner(), weekly_runner=get_weekly_runner())
     scheduler.start()
+
+    await bot.set_my_commands([
+        BotCommand(command="assess", description="Run a full three-gate assessment"),
+        BotCommand(command="verdict", description="Show the most recent stored verdict"),
+        BotCommand(command="help", description="Show available commands"),
+    ])
 
     logger.info("Starting grid bot monitor…")
     await dp.start_polling(bot)
