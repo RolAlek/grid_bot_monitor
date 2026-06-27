@@ -78,10 +78,15 @@ class DecisionVerdict:
     as_of: datetime
     action: VerdictAction
     gates: tuple[GateResult, ...]
+    notes: str | None = None
+
+    # Suggested parameters
     suggested_grid_top: float | None = None
     suggested_grid_bottom: float | None = None
+    suggested_grid_levels: int | None = None
+    suggested_grid_regime: Trend | None = None
+    suggested_grid_type: GridType | None = None
     suggested_leverage: int | None = None
-    notes: str | None = None
 
 
 @dataclass(frozen=True)
