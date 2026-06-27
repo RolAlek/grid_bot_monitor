@@ -5,7 +5,7 @@ from aiogram import Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from source.dependencies import get_daily_runner, get_decision_service, get_telegram_bot, get_weekly_runner
-from source.logging_config import configure_logging
+from source.observability.logging_config import configure_logging
 from source.presentation.bot.handlers.common_handlers import common_router
 from source.presentation.bot.handlers.decision_handlers import router_factory
 from source.presentation.scheduler.jobs import register_jobs
