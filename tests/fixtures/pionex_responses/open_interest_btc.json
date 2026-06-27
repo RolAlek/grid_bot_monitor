@@ -1,0 +1,12 @@
+{
+  "result": true,
+  "timestamp": 1748995200000,
+  "data": {
+    "openInterests": [
+      {
+        "symbol": "USDT_BTC_REPR",
+        "openInterest": 5000000.0
+      }
+    ]
+  }
+}
