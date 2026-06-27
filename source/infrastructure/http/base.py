@@ -15,8 +15,6 @@ class BaseHTTPClient:
         self._timeout = timeout
         self._auth = auth or Auth()
 
-        self._client = AsyncClient(base_url=self._base_url, timeout=self._timeout, auth=self._auth)
-
     async def get(
         self,
         path: str,
@@ -101,7 +99,7 @@ class BaseHTTPClient:
                 exclude_none=exclude_none,
             )
 
-        async with self._client as client:
+        async with AsyncClient(base_url=self._base_url, timeout=self._timeout, auth=self._auth) as client:
             response = await client.request(
                 method=method,
                 url=path,
