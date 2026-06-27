@@ -26,9 +26,13 @@ class AssessPositioningService:
         self._oi_service = oi_service
 
     async def execute(self, symbol: Symbol) -> GateResult:
+        logger.info("Start assessing positioning for %s", symbol.value)
+
         snapshot = await self._build_snapshot(symbol)
         checks = build_positioning_checks(snapshot, self._settings)
         statuses, reasons = evaluate_checks(checks)
+
+        await self._oi_service.persist_oi_snapshot(snapshot)
 
         return GateResult(
             gate=Gate.POSITIONING,

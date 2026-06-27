@@ -56,17 +56,34 @@ class AiogramNotifier(NotifierPort):
         for gate in verdict.gates:
             gate_emoji = self._STATUS_EMOJI.get(gate.status, "⚪")
             gate_lines.append(f"{gate_emoji} <b>{gate.gate.name}</b> — {gate.status.name}")
-            # all reasons now, not just reasons[0]
             gate_lines.extend(f"   • {html.escape(reason)}" for reason in gate.reasons)
+
         if gate_lines:
             sections.append("\n".join(gate_lines))
 
-        top, bottom, leverage = verdict.suggested_grid_top, verdict.suggested_grid_bottom, verdict.suggested_leverage
-        if top is not None and bottom is not None and leverage is not None:
-            sections.append(f"<b>Suggested range:</b> {bottom:,.0f} - {top:,.0f}\n<b>Leverage:</b> {leverage}x")
-
         if verdict.action == VerdictAction.LAUNCH:
-            sections.append("👉 Reply /confirm_launch to proceed — no order has been placed.")
+            param_lines: list[str] = [
+                "🚀 Reply /confirm_launch to proceed — no order has been placed.\n",
+                "🛠 <b>Launch parameters</b>: \n",
+            ]
+
+            if verdict.suggested_grid_top is not None and verdict.suggested_grid_bottom is not None:
+                param_lines.append(
+                    f"📐 <b>Range:</b> {verdict.suggested_grid_top:,.0f} - {verdict.suggested_grid_bottom:,.0f}\n"
+                )
+            if verdict.suggested_grid_levels is not None:
+                param_lines.append(f"🔢 <b>Grid levels:</b> {verdict.suggested_grid_levels}\n")
+
+            if verdict.suggested_grid_regime is not None:
+                param_lines.append(f"📈 <b>Trend regime:</b> {verdict.suggested_grid_regime.value}\n")
+
+            if verdict.suggested_grid_type is not None:
+                param_lines.append(f"⚙️ <b>Grid type:</b> {verdict.suggested_grid_type.value}\n")
+
+            if verdict.suggested_leverage is not None:
+                param_lines.append(f"⚡️ <b>Leverage:</b> {verdict.suggested_leverage}x")
+
+            sections.append("\n".join(param_lines))
 
         return "\n\n".join(sections)
 
