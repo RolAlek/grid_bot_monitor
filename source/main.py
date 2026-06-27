@@ -6,6 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from source.dependencies import get_daily_runner, get_decision_service, get_telegram_bot, get_weekly_runner
 from source.logging_config import configure_logging
+from source.presentation.bot.handlers.common_handlers import common_router
 from source.presentation.bot.handlers.decision_handlers import router_factory
 from source.presentation.scheduler.jobs import register_jobs
 from source.settings import get_settings
@@ -20,6 +21,7 @@ async def main() -> None:
 
     bot = get_telegram_bot()
     dp = Dispatcher()
+    dp.include_router(common_router())
     dp.include_router(
         router_factory(
             weekly_runner=get_weekly_runner(),
