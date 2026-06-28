@@ -1,8 +1,10 @@
 from collections.abc import AsyncGenerator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from functools import cache
+from typing import Any
 
 from aiogram import Bot
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.gates.assess_liquidation_safety_third_gate import AssessLiquidationSafetyService
@@ -14,7 +16,7 @@ from source.application.services.oi_snapshot_service import OISnapshotService
 from source.application.services.run_daily_positioning_check import RunDailyPositioningCheck
 from source.application.services.run_weekly_full_assessment import RunWeeklyFullAssessment
 from source.infrastructure.database.engine import async_session_factory
-from source.infrastructure.database.repositories.base import AbstractSQLAlchemyRepository
+from source.infrastructure.database.repositories.base import SQLAlchemyBaseRepository
 from source.infrastructure.database.repositories.decision_repository import SQLAlchemyDecisionLogRepository
 from source.infrastructure.database.repositories.oi_repository import SQLAlchemySnapshotRepository
 from source.infrastructure.http.pionex.auth_strategy import CustomPionexAuth
@@ -37,9 +39,9 @@ def get_notifier() -> AiogramNotifier:
 
 
 @cache
-def create_service_provider_dependency[RC: AbstractSQLAlchemyRepository](
-    repository_class: type[RC],
-) -> Callable[..., AbstractAsyncContextManager[RC]]:
+def create_service_provider_dependency[RC: SQLAlchemyBaseRepository[Any, Any]](
+    repository_class: Callable[[AsyncSession], RC],
+) -> Callable[[], AbstractAsyncContextManager[RC]]:
     @asynccontextmanager
     async def provider() -> AsyncGenerator[RC]:
         async with async_session_factory() as session:

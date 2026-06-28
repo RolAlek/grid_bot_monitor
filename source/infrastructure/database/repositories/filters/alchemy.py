@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, cast
 
 from sqlalchemy import ColumnElement, asc, desc
@@ -39,7 +39,9 @@ class SQLAlchemyFieldCondition(BaseFieldCondition):
 
 
 @dataclass(frozen=True, slots=True)
-class SQLAlchemyQueryFilter(BaseQueryFilter[SQLAlchemyFieldCondition]):
+class SQLAlchemyQueryFilter(BaseQueryFilter):
+    conditions: tuple[SQLAlchemyFieldCondition, ...] = field(default_factory=tuple)
+
     def apply(self, stmt: Select[Any], model: type[DeclarativeBase]) -> Select[Any]:
         if self.conditions:
             stmt = stmt.where(*(condition.to_expression(model) for condition in self.conditions))

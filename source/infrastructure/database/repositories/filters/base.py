@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
@@ -16,18 +15,16 @@ class Operator(StrEnum):
     ICONTAINS = "icontains"
 
 
-class BaseFieldCondition(ABC):
+@dataclass(frozen=True, slots=True)
+class BaseFieldCondition:
     field: str
     operator: Operator
     value: Any
 
-    @abstractmethod
-    def to_expression(self, model: type) -> Any: ...
-
 
 @dataclass(frozen=True, slots=True)
-class BaseQueryFilter[CT: BaseFieldCondition]:
-    conditions: tuple[CT, ...] = field(default_factory=tuple)
+class BaseQueryFilter:
+    conditions: tuple[BaseFieldCondition, ...] = field(default_factory=tuple)
     order_by: tuple[str, ...] = field(default_factory=tuple)
     limit: int | None = None
     offset: int | None = None
