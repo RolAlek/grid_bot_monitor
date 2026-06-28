@@ -12,7 +12,7 @@ class OISnapshot(Base):
     __tablename__ = "oi_snapshots"
     __table_args__ = (
         Index("idx_oi_snapshot_symbol_created_at", "symbol", "created_at"),
-        Index("uq_oi_snapshot_symbol_date", "symbol", func.date("created_at"), unique=True),
+        Index("uq_oi_snapshot_symbol_date", "symbol", func.date(text("created_at")), unique=True),
     )
 
     symbol: Mapped[SymbolType]

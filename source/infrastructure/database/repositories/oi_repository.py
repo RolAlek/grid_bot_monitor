@@ -3,12 +3,18 @@ from datetime import datetime, timedelta
 from typing import Protocol
 
 from sqlalchemy import and_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from structlog import get_logger
+from structlog.stdlib import BoundLogger
 
 from source.domain.entities import FundingOiSnapshot
 from source.domain.value_objects import Symbol
 from source.infrastructure.database.models.models import OISnapshot
 from source.infrastructure.database.repositories.base import AbstractSQLAlchemyRepository
+
+
+logger: BoundLogger = get_logger(__name__)
 
 
 class SnapshotRepository(Protocol):
@@ -47,12 +53,21 @@ class SQLAlchemySnapshotRepository(AbstractSQLAlchemyRepository, SnapshotReposit
         ]
 
     async def save_snapshot(self, snapshot_data: FundingOiSnapshot) -> None:
-        obj = OISnapshot(
-            symbol=snapshot_data.symbol.value,
-            funding_rate_last=snapshot_data.funding_rate_last,
-            funding_rate_annualized_pct=snapshot_data.funding_rate_annualized_pct,
-            open_interest=snapshot_data.open_interest,
-            oi_pct_change_7d=snapshot_data.oi_pct_change_7d,
-        )
-        self._session.add(obj)
-        await self._session.commit()
+        try:
+            obj = OISnapshot(
+                symbol=snapshot_data.symbol.value,
+                funding_rate_last=snapshot_data.funding_rate_last,
+                funding_rate_annualized_pct=snapshot_data.funding_rate_annualized_pct,
+                open_interest=snapshot_data.open_interest,
+                oi_pct_change_7d=snapshot_data.oi_pct_change_7d,
+            )
+            self._session.add(obj)
+            await self._session.flush()
+        except IntegrityError as error:
+            if "uq_oi_snapshot_symbol_date" in str(error.orig):
+                logger.warning(
+                    "Duplicate OI snapshot — skipping duplicate write",
+                    symbol=snapshot_data.symbol.value,
+                    date=snapshot_data.as_of.date(),
+                )
+            raise

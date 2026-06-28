@@ -59,4 +59,4 @@ class SQLAlchemyDecisionLogRepository(AbstractSQLAlchemyRepository, DecisionLogR
             notes=data.notes,
         )
         self._session.add(obj)
-        await self._session.commit()
+        await self._session.flush()
