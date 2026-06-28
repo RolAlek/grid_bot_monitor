@@ -1,8 +1,18 @@
 from abc import ABC, abstractmethod
+from typing import TypeVar
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from source.infrastructure.database.repositories.filters.base import QueryFilter
 
 
-class AbstractSQLAlchemyRepository(ABC):
+DomainT = TypeVar("DomainT")
+
+
+class AbstractRepository[DT](ABC):
     @abstractmethod
-    def __init__(self, session: AsyncSession) -> None: ...
+    async def get_list(self, filters: QueryFilter) -> list[DT]: ...
+
+    @abstractmethod
+    async def get_one(self, filters: QueryFilter) -> DT | None: ...
+
+    @abstractmethod
+    async def add(self, data: DT) -> DT: ...
