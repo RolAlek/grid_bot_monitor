@@ -37,8 +37,8 @@ async def main() -> None:
     scheduler.start()
 
     await bot.set_my_commands([
-        BotCommand(command="weekly_assess", description="Run a full three-gate assessment"),
-        BotCommand(command="daily_assess", description="Run a daily second gate assessment"),
+        BotCommand(command="weekly_assessment", description="Run a full three-gate assessment"),
+        BotCommand(command="daily_assessment", description="Run a daily second gate assessment"),
         BotCommand(command="verdict", description="Show the most recent stored verdict"),
         BotCommand(command="help", description="Show available commands"),
     ])
