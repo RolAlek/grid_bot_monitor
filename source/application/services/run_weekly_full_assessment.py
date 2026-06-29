@@ -43,8 +43,10 @@ class RunWeeklyFullAssessment:
         if first_gate_result.status != GateStatus.FAIL:
             second_gate_result = await self._gate2.execute(symbol)
             logger.info("Gate 2 result", gate=second_gate_result.gate.name, status=second_gate_result.status.name)
+
             third_gate_result = await self._gate3.execute(proposal)
             logger.info("Gate 3 result", gate=third_gate_result.gate.name, status=third_gate_result.status.name)
+
             gates.extend([second_gate_result, third_gate_result])
 
         verdict = self._resolve(
@@ -55,7 +57,7 @@ class RunWeeklyFullAssessment:
         )
 
         logger.info("Verdict resolved", action=verdict.action.value)
-        await self._decision_service.persist_verdict(verdict)
+        verdict = await self._decision_service.persist_verdict(verdict)
         await self._notifier.send_digest(verdict)
 
         return verdict

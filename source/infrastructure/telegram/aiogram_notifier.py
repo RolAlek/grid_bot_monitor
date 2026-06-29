@@ -3,6 +3,7 @@ from types import MappingProxyType
 from typing import ClassVar
 
 from aiogram import Bot
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from source.application.ports import NotifierPort
 from source.domain.entities import DecisionVerdict
@@ -43,6 +44,14 @@ class AiogramNotifier(NotifierPort):
         )
 
     async def send_digest(self, verdict: DecisionVerdict) -> None:
+        if verdict.action == VerdictAction.LAUNCH:
+            buttons = [
+                InlineKeyboardButton(text="🦽 Manual", callback_data=f"manual_approve:{verdict.oid}"),
+                InlineKeyboardButton(text="🪄 Launch", callback_data=f"api_launch:{verdict.oid}"),
+                InlineKeyboardButton(text="🚫 Reject", callback_data="reject"),
+            ]
+            InlineKeyboardMarkup(inline_keyboard=[buttons])
+
         await self._bot.send_message(chat_id=self._chat_id, text=self._format_digest(verdict), parse_mode="HTML")
 
     def _format_digest(self, verdict: DecisionVerdict) -> str:
@@ -63,8 +72,8 @@ class AiogramNotifier(NotifierPort):
 
         if verdict.action == VerdictAction.LAUNCH:
             param_lines: list[str] = [
-                "🚀 Reply /confirm_launch to proceed — no order has been placed.\n",
-                "🛠 <b>Launch parameters</b>: \n",
+                "🚀 Reply /confirm_launch to proceed — no order has been placed.\n\n",
+                "🛠 <b>Launch parameters</b>:\n",
             ]
 
             if verdict.suggested_grid_top is not None and verdict.suggested_grid_bottom is not None:

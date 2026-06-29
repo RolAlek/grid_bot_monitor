@@ -16,10 +16,10 @@ class DecisionLogService:
     ) -> None:
         self._provider_decision_log_repository = provider_decision_log_repository
 
-    async def persist_verdict(self, verdict: DecisionVerdict) -> None:
+    async def persist_verdict(self, verdict: DecisionVerdict) -> DecisionVerdict:
 
         async with self._provider_decision_log_repository() as repository:
-            await repository.add(verdict)
+            return await repository.add(verdict)
 
     async def get_last_decision(self, symbol: Symbol) -> DecisionVerdict | None:
         filters = BaseQueryFilter(
