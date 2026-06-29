@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from uuid import UUID
 
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
 from source.domain.value_objects import GateResult, GridLaunchStatus, GridType, Symbol, Trend, VerdictAction
@@ -70,6 +69,7 @@ class DecisionVerdict:
     as_of: datetime
     action: VerdictAction
     gates: tuple[GateResult, ...]
+    oid: str | None = None
     notes: str | None = None
 
     # Suggested parameters
@@ -122,8 +122,7 @@ class IndexPrice:
 
 
 @dataclass
-class LaunchedGrid:
-    oid: UUID
+class Grid:
     symbol: Symbol
     top: float
     bottom: float
@@ -136,5 +135,6 @@ class LaunchedGrid:
     decision_verdict: DecisionVerdict
 
     created_at: datetime
-    closed_at: datetime | None = None
     realized_pnl: float | None = None
+    oid: str | None = None
+    closed_at: datetime | None = None
