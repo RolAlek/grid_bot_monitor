@@ -2,8 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from source.domain.entities import GateResult
-from source.domain.value_objects import Gate, GateStatus, VerdictAction
+from source.domain.value_objects import Gate, GateResult, GateStatus, VerdictAction
 from source.infrastructure.telegram.aiogram_notifier import AiogramNotifier
 from tests.fixtures.factories import make_decision_verdict, make_gate_result
 

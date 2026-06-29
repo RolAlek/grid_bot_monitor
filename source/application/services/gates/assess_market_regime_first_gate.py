@@ -5,8 +5,8 @@ from source.application.services.grid_builder import GridProposalBuilder
 from source.application.services.indicator_service import IndicatorService
 from source.application.use_cases.check_regime_rules import build_market_regime_checks
 from source.application.utils import evaluate_checks
-from source.domain.entities import Candle, GateResult, IndicatorSet, ProposedGridParams
-from source.domain.value_objects import Gate, Symbol
+from source.domain.entities import Candle, IndicatorSet, ProposedGridParams
+from source.domain.value_objects import Gate, GateResult, Symbol
 from source.settings import Settings
 
 

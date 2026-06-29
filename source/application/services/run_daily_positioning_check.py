@@ -5,8 +5,8 @@ import structlog
 from source.application.ports import NotifierPort
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.gates.assess_positioning_second_gate import AssessPositioningService
-from source.domain.entities import DecisionVerdict, GateResult
-from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
+from source.domain.entities import DecisionVerdict
+from source.domain.value_objects import Gate, GateResult, GateStatus, Symbol, VerdictAction
 from source.settings import Settings
 
 

@@ -1,18 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
 from uuid import UUID
 
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
-from source.domain.value_objects import Gate, GateStatus, GridLaunchStatus, GridType, Symbol, Trend, VerdictAction
-
-
-@dataclass(frozen=True)
-class GateResult:
-    gate: Gate
-    status: GateStatus
-    reasons: tuple[str, ...]
-    raw_values: dict[str, Any]
+from source.domain.value_objects import GateResult, GridLaunchStatus, GridType, Symbol, Trend, VerdictAction
 
 
 @dataclass(frozen=True)

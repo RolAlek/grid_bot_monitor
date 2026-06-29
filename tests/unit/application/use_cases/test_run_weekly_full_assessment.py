@@ -7,8 +7,8 @@ from source.application.services.gates.assess_liquidation_safety_third_gate impo
 from source.application.services.gates.assess_market_regime_first_gate import AssessMarketRegimeService
 from source.application.services.gates.assess_positioning_second_gate import AssessPositioningService
 from source.application.services.run_weekly_full_assessment import RunWeeklyFullAssessment
-from source.domain.entities import GateResult, ProposedGridParams
-from source.domain.value_objects import Gate, GateStatus, GridType, Symbol, Trend
+from source.domain.entities import ProposedGridParams
+from source.domain.value_objects import Gate, GateResult, GateStatus, GridType, Symbol, Trend
 from source.settings import DecisionEngineSettings, PionexSettings, Settings
 
 

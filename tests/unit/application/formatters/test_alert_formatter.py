@@ -2,8 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from source.domain.entities import GateResult
-from source.domain.value_objects import Gate, GateStatus
+from source.domain.value_objects import Gate, GateResult, GateStatus
 from source.infrastructure.telegram.aiogram_notifier import AiogramNotifier
 
 

@@ -5,12 +5,11 @@ from source.domain.entities import (
     Candle,
     DecisionVerdict,
     FundingRate,
-    GateResult,
     LiquidationEstimate,
     OpenInterest,
     ProposedGridParams,
 )
-from source.domain.value_objects import GateStatus, Symbol
+from source.domain.value_objects import GateResult, GateStatus, Symbol
 
 
 class MarketDataPort(Protocol):

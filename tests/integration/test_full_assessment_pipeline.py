@@ -16,12 +16,11 @@ from source.domain.entities import (
     DecisionVerdict,
     FundingOiSnapshot,
     FundingRate,
-    GateResult,
     LiquidationEstimate,
     OpenInterest,
     ProposedGridParams,
 )
-from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
+from source.domain.value_objects import Gate, GateResult, GateStatus, Symbol, VerdictAction
 from source.settings import DecisionEngineSettings
 from tests.fixtures.factories import FIXED_NOW, make_proposed_grid_params
 

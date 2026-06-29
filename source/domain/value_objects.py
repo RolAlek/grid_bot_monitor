@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
+from typing import Any
 
 
 class GateStatus(IntEnum):
@@ -59,3 +60,11 @@ class GateRule:
     triggered: bool
     status: GateStatus
     message: str
+
+
+@dataclass(frozen=True)
+class GateResult:
+    gate: Gate
+    status: GateStatus
+    reasons: tuple[str, ...]
+    raw_values: dict[str, Any]

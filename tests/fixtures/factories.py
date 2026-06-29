@@ -6,12 +6,11 @@ from source.domain.entities import (
     Candle,
     DecisionVerdict,
     FundingOiSnapshot,
-    GateResult,
     IndicatorSet,
     LiquidationEstimate,
     ProposedGridParams,
 )
-from source.domain.value_objects import Gate, GateStatus, GridType, Symbol, Trend, VerdictAction
+from source.domain.value_objects import Gate, GateResult, GateStatus, GridType, Symbol, Trend, VerdictAction
 
 
 FIXED_NOW = datetime(2026, 6, 1, tzinfo=UTC)

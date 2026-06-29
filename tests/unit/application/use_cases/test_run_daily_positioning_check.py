@@ -4,8 +4,7 @@ import pytest
 
 from source.application.services.gates.assess_positioning_second_gate import AssessPositioningService
 from source.application.services.run_daily_positioning_check import RunDailyPositioningCheck
-from source.domain.entities import GateResult
-from source.domain.value_objects import Gate, GateStatus, Symbol
+from source.domain.value_objects import Gate, GateResult, GateStatus, Symbol
 from source.settings import DecisionEngineSettings, PionexSettings, Settings
 
 

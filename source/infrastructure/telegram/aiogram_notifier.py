@@ -5,8 +5,8 @@ from typing import ClassVar
 from aiogram import Bot
 
 from source.application.ports import NotifierPort
-from source.domain.entities import DecisionVerdict, GateResult
-from source.domain.value_objects import GateStatus, VerdictAction
+from source.domain.entities import DecisionVerdict
+from source.domain.value_objects import GateResult, GateStatus, VerdictAction
 
 
 ALERT_TEMPLATE = (

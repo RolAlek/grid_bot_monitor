@@ -6,8 +6,8 @@ from source.application.ports import MarketDataPort
 from source.application.services.oi_snapshot_service import OISnapshotService
 from source.application.use_cases.check_positioning_rueles import build_positioning_checks
 from source.application.utils import evaluate_checks
-from source.domain.entities import FundingOiSnapshot, GateResult, OpenInterest
-from source.domain.value_objects import Gate, Symbol
+from source.domain.entities import FundingOiSnapshot, OpenInterest
+from source.domain.value_objects import Gate, GateResult, Symbol
 from source.settings import DecisionEngineSettings
 
 

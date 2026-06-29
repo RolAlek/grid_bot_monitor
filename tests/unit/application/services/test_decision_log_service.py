@@ -4,8 +4,8 @@ from datetime import UTC, datetime, timedelta
 
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.oi_snapshot_service import OISnapshotService
-from source.domain.entities import DecisionVerdict, FundingOiSnapshot, GateResult
-from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
+from source.domain.entities import DecisionVerdict, FundingOiSnapshot
+from source.domain.value_objects import Gate, GateResult, GateStatus, Symbol, VerdictAction
 from tests.fixtures.factories import FIXED_NOW, make_decision_verdict, make_funding_oi_snapshot
 
 
