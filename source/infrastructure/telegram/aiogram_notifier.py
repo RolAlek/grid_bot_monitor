@@ -3,11 +3,11 @@ from types import MappingProxyType
 from typing import ClassVar
 
 from aiogram import Bot
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from source.application.ports import NotifierPort
 from source.domain.entities import DecisionVerdict
 from source.domain.value_objects import GateResult, GateStatus, VerdictAction
+from source.presentation.bot.keyboards.inlines import build_verdict_reaction_kb
 
 
 ALERT_TEMPLATE = (
@@ -44,15 +44,17 @@ class AiogramNotifier(NotifierPort):
         )
 
     async def send_digest(self, verdict: DecisionVerdict) -> None:
-        if verdict.action == VerdictAction.LAUNCH:
-            buttons = [
-                InlineKeyboardButton(text="🦽 Manual", callback_data=f"manual_approve:{verdict.oid}"),
-                InlineKeyboardButton(text="🪄 Launch", callback_data=f"api_launch:{verdict.oid}"),
-                InlineKeyboardButton(text="🚫 Reject", callback_data="reject"),
-            ]
-            InlineKeyboardMarkup(inline_keyboard=[buttons])
+        if not verdict.oid:
+            raise ValueError('"oid" is not set for decision verdict.')
 
-        await self._bot.send_message(chat_id=self._chat_id, text=self._format_digest(verdict), parse_mode="HTML")
+        kb = build_verdict_reaction_kb(verdict.oid) if verdict.action == VerdictAction.LAUNCH else None
+
+        await self._bot.send_message(
+            chat_id=self._chat_id,
+            text=self._format_digest(verdict),
+            parse_mode="HTML",
+            reply_markup=kb,
+        )
 
     def _format_digest(self, verdict: DecisionVerdict) -> str:
         verdict_emoji = self._VERDICT_EMOJI.get(verdict.action, "⚪")
