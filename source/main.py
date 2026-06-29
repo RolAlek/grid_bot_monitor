@@ -26,6 +26,7 @@ async def main() -> None:
     dp.include_router(
         router_factory(
             weekly_runner=get_weekly_runner(),
+            daily_runner=get_daily_runner(),
             decision_service=get_decision_service(),
             symbol=settings.pionex.symbol,
         )
@@ -36,7 +37,8 @@ async def main() -> None:
     scheduler.start()
 
     await bot.set_my_commands([
-        BotCommand(command="assess", description="Run a full three-gate assessment"),
+        BotCommand(command="weekly_assess", description="Run a full three-gate assessment"),
+        BotCommand(command="daily_assess", description="Run a daily second gate assessment"),
         BotCommand(command="verdict", description="Show the most recent stored verdict"),
         BotCommand(command="help", description="Show available commands"),
     ])
