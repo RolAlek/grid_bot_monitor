@@ -36,6 +36,7 @@ class GridProposalBuilder:
             quote_investment=self._settings.default_quote_investment,
             stop_loss=stop_loss,
             take_profit=take_profit,
+            last_price=indicators.last_price,
         )
 
     def _determine_trend(self, indicators: IndicatorSet) -> Trend:

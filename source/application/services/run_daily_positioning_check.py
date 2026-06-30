@@ -45,9 +45,6 @@ class RunDailyPositioningCheck:
                 symbol=symbol,
                 action=self._resolve_action(second_gate_result.status),
                 gates=(second_gate_result,),
-                suggested_grid_top=None,
-                suggested_grid_bottom=None,
-                suggested_leverage=None,
                 notes="daily positioning check",
             )
         )

@@ -17,6 +17,8 @@ class ProposedGridParams:
     trend: Trend
     grid_type: GridType
 
+    last_price: float
+
     stop_loss: float | None = None
     take_profit: float | None = None
 

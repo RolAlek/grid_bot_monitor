@@ -20,14 +20,14 @@ class AssessLiquidationSafetyService:
         self._settings = settings
         self._grid_validation = grid_validation
 
-    async def execute(self, proposal: ProposedGridParams, price: float) -> GateResult:
+    async def execute(self, proposal: ProposedGridParams) -> GateResult:
         logger.debug(
             "Validating grid params",
             leverage=proposal.leverage,
             grid_range=proposal.top - proposal.bottom,
         )
         liquidation_estimate = await self._grid_validation.check_grid_params(proposal)
-        checks = build_liquidation_safety_checks(liquidation_estimate, self._settings, price)
+        checks = build_liquidation_safety_checks(liquidation_estimate, self._settings)
         status, reasons = evaluate_checks(checks)
 
         logger.info(

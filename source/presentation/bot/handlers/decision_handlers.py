@@ -13,7 +13,7 @@ from source.domain.value_objects import Symbol
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
-def router_factory(
+def decision_router(
     weekly_runner: RunWeeklyFullAssessment,
     daily_runner: RunDailyPositioningCheck,
     decision_service: DecisionLogService,
@@ -64,10 +64,10 @@ def router_factory(
                 reason = gate.reasons[0] if gate.reasons else "ok"
                 lines.append(f"  {gate.gate.name}: {gate.status.name} — {reason}")
 
-            if verdict.suggested_grid_top is not None:
+            if verdict.suggested_parameters and verdict.suggested_parameters.top is not None:
                 lines.append(
-                    f"Range: {verdict.suggested_grid_bottom:,.0f} - {verdict.suggested_grid_top:,.0f}"
-                    f"  |  Leverage: {verdict.suggested_leverage}x"
+                    f"Range: {verdict.suggested_parameters.bottom:,.0f} - {verdict.suggested_parameters.top:,.0f}"
+                    f"  |  Leverage: {verdict.suggested_parameters.leverage}x"
                 )
 
             await message.answer("\n".join(lines))

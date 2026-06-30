@@ -9,7 +9,6 @@ STOP_LOSS_TOO_CLOSE = "Stop-loss {stop_loss:.2f} too close to price {price:.2f} 
 def build_liquidation_safety_checks(
     estimate: LiquidationEstimate,
     settings: DecisionEngineSettings,
-    price: float,
 ) -> list[GateRule]:
     proposal = estimate.proposal
     up, down = estimate.buffer_multiplier_up, estimate.buffer_multiplier_down
@@ -43,7 +42,7 @@ def build_liquidation_safety_checks(
     ]
 
     min_distance_pct = 0.005 if proposal.symbol == Symbol.XAUT else 0.01
-    min_distance = min_distance_pct * price
+    min_distance = min_distance_pct * proposal.last_price
 
     if proposal.trend == Trend.LONG and proposal.stop_loss and proposal.take_profit:
         rules.extend([
@@ -53,10 +52,10 @@ def build_liquidation_safety_checks(
                 message=f"Stop-loss {proposal.stop_loss:.2f} at/below liquidation {down:.2f}",
             ),
             GateRule(
-                triggered=(price - proposal.stop_loss) < min_distance,
+                triggered=(proposal.last_price - proposal.stop_loss) < min_distance,
                 status=GateStatus.CAUTION,
                 message=STOP_LOSS_TOO_CLOSE.format(
-                    stop_lose=proposal.stop_loss, price=price, min_distance_pct=min_distance_pct
+                    stop_lose=proposal.stop_loss, price=proposal.last_price, min_distance_pct=min_distance_pct
                 ),
             ),
             GateRule(
@@ -77,10 +76,10 @@ def build_liquidation_safety_checks(
                 message=f"Stop-loss {proposal.stop_loss:.2f} at/above liquidation {up:.2f}",
             ),
             GateRule(
-                triggered=(proposal.stop_loss - price) < min_distance,
+                triggered=(proposal.stop_loss - proposal.last_price) < min_distance,
                 status=GateStatus.CAUTION,
                 message=STOP_LOSS_TOO_CLOSE.format(
-                    stop_lose=proposal.stop_loss, price=price, min_distance_pct=min_distance_pct
+                    stop_lose=proposal.stop_loss, price=proposal.last_price, min_distance_pct=min_distance_pct
                 ),
             ),
             GateRule(

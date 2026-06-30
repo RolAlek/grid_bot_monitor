@@ -83,10 +83,5 @@ class RunWeeklyFullAssessment:
             action=action,
             gates=tuple(gates),
             notes=notes,
-            suggested_grid_top=proposal.top if proposal else None,
-            suggested_grid_bottom=proposal.bottom if proposal else None,
-            suggested_grid_levels=proposal.grid_levels if proposal else None,
-            suggested_grid_regime=proposal.trend if proposal else None,
-            suggested_grid_type=proposal.grid_type if proposal else None,
-            suggested_leverage=proposal.leverage if proposal else None,
+            suggested_parameters=proposal,
         )
