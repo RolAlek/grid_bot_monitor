@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
+from source.domain.exceptions import InvalidGridParamsError
 from source.domain.value_objects import GateResult, GridLaunchStatus, GridType, Symbol, Trend, VerdictAction
 
 
@@ -15,6 +16,13 @@ class ProposedGridParams:
     quote_investment: float
     trend: Trend
     grid_type: GridType
+
+    stop_loss: float | None = None
+    take_profit: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.trend in {Trend.LONG, Trend.SHORT} and self.stop_loss is None and self.take_profit is None:
+            raise InvalidGridParamsError(f"Stop-loss and take-profit must be set for {self.trend.value} grid")
 
     @property
     def grid_range(self) -> float:
