@@ -48,11 +48,11 @@ class Symbol(StrEnum):
 
     @property
     def quote(self) -> str:
-        return self.split("_")[0]
+        return self.split("_")[1]
 
     @property
     def base(self) -> str:
-        return self.split("_")[1]
+        return self.split("_")[0]
 
     @property
     def type_(self) -> str:

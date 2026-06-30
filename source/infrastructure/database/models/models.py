@@ -78,12 +78,15 @@ class GridLaunchModel(Base):
     grid_type: Mapped[str] = mapped_column(String(16))
     grid_leverage: Mapped[int]
     quote_investment: Mapped[float]
+    stop_loss: Mapped[float | None]
+    take_profit: Mapped[float | None]
 
     # Outcome tracking — nullable, populated later, never guessed at write time.
     updated_at: Mapped[UpdatedAt]
     closed_at: Mapped[CreatedAt | None]
     realized_pnl: Mapped[float | None]
     status: Mapped[str] = mapped_column(String(16))
+    external_id: Mapped[str | None]
 
     decision_verdict_oid: Mapped[str] = mapped_column(String(36), ForeignKey("decision_logs.oid"), index=True)
     decision_verdict: Mapped[DecisionLog] = relationship(back_populates="launched_grid", lazy="joined")

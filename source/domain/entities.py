@@ -137,12 +137,13 @@ class Grid:
     leverage: int
     investment: float
     status: GridLaunchStatus
-    decision_verdict: DecisionVerdict
 
-    created_at: datetime
-    realized_pnl: float | None = None
+    decision_verdict_oid: str
+
     oid: str | None = None
     external_id: str | None = None
+    realized_pnl: float | None = None
+    created_at: datetime | None = None
     closed_at: datetime | None = None
     stop_loss: float | None = None
     take_profit: float | None = None

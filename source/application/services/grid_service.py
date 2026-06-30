@@ -46,3 +46,27 @@ class GridBotService:
         api_result = await self._grid_port.create_grid(verdict)
 
         return await self.persist_grid(api_result)
+
+    async def launch_grid_manual(self, verdict_oid: str) -> Grid:
+        async with self._provider_decision_log_repository() as repository:
+            verdict = await repository.get_by_oid(verdict_oid)
+
+        if not verdict or not verdict.suggested_parameters or not verdict.oid:
+            raise DecisionNotFoundError(f"Decision with {verdict_oid} does not exist")
+
+        return await self.persist_grid(
+            Grid(
+                symbol=verdict.symbol,
+                top=verdict.suggested_parameters.top,
+                bottom=verdict.suggested_parameters.bottom,
+                trend=verdict.suggested_parameters.trend,
+                levels=verdict.suggested_parameters.grid_levels,
+                grid_type=verdict.suggested_parameters.grid_type,
+                leverage=verdict.suggested_parameters.leverage,
+                investment=verdict.suggested_parameters.quote_investment,
+                status=GridLaunchStatus.RUNNING,
+                decision_verdict_oid=verdict.oid,
+                stop_loss=verdict.suggested_parameters.stop_loss,
+                take_profit=verdict.suggested_parameters.take_profit,
+            )
+        )
