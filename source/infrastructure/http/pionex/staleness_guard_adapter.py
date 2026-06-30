@@ -1,11 +1,11 @@
 from datetime import UTC, datetime
 
-from source.application.ports import GridValidationPort
+from source.application.ports import GridPort
 from source.domain.entities import LiquidationEstimate, ProposedGridParams
 
 
-class StalenessGuardAdapter(GridValidationPort):
-    def __init__(self, delegate: GridValidationPort, ttl_seconds: int = 120) -> None:
+class StalenessGuardAdapter(GridPort):
+    def __init__(self, delegate: GridPort, ttl_seconds: int = 120) -> None:
         self._delegate = delegate
         self._ttl = ttl_seconds
         self._cache: dict[ProposedGridParams, tuple[datetime, LiquidationEstimate]] = {}

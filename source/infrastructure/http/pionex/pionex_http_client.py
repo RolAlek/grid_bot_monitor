@@ -16,6 +16,7 @@ from source.domain.entities import (
 from source.domain.exceptions import (
     InvalidCandleDataError,
     InvalidFundingRateDataError,
+    InvalidGridParamsError,
     InvalidLiquidationEstimateDataError,
     InvalidOpenInterestDataError,
 )
@@ -85,7 +86,12 @@ class PionexHTTPClient(BaseHTTPClient):
             estimate_liquidation_price_down=data.estimate_liquidation_price_down,
         )
 
-    async def create_grid(self, params: ProposedGridParams, verdict: DecisionVerdict) -> Grid:
+    async def create_grid(self, verdict: DecisionVerdict) -> Grid:
+        params = verdict.suggested_parameters
+
+        if not params:
+            raise InvalidGridParamsError("Invalid decision verdict. No parameters provided.")
+
         payload = CreateGridBotRequestSchema(
             base=params.symbol.base,
             quote=params.symbol.quote,

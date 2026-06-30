@@ -5,6 +5,7 @@ from source.domain.entities import (
     Candle,
     DecisionVerdict,
     FundingRate,
+    Grid,
     LiquidationEstimate,
     OpenInterest,
     ProposedGridParams,
@@ -40,6 +41,9 @@ class NotifierPort(Protocol):
     async def send_digest(self, verdict: DecisionVerdict) -> None: ...
 
 
-class GridValidationPort(Protocol):
+class GridPort(Protocol):
     @abstractmethod
     async def check_grid_params(self, params: ProposedGridParams) -> LiquidationEstimate: ...
+
+    @abstractmethod
+    async def create_grid(self, verdict: DecisionVerdict) -> Grid: ...
