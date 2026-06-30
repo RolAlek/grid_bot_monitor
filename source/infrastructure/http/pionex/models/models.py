@@ -130,10 +130,10 @@ class OpenInterestsDataObject(BaseSchema):
 class GetOpenInterestsResponseSchema(SuccessResponse[OpenInterestsDataObject]): ...
 
 
-class CreateFuturesGridOrderData(CamelSchema):
-    top: float
-    bottom: float
-    row: int
+class BuOrderDataObject(CamelSchema):
+    top: float = Field(description="Grid upper price")
+    bottom: float = Field(description="Grid lower price")
+    row: int = Field(description="Number of grid levels")
     grid_type: GridType
     trend: Trend
     leverage: int
@@ -142,14 +142,14 @@ class CreateFuturesGridOrderData(CamelSchema):
     condition: float | None = None
     condition_direction: Literal["1", "-1"] | None = None
 
-    loss_stop_type: SLTPType = SLTPType.PRICE
+    loss_stop_type: SLTPType | None = None
     loss_stop: float | None = None
     loss_stop_delay: int | None = None
     loss_stop_high: str | None = None
     loss_stop_limit_price: str | None = None
     loss_stop_limit_high_price: str | None = None
 
-    profit_stop_type: SLTPType = SLTPType.PRICE
+    profit_stop_type: SLTPType | None = None
     profit_stop: float | None = None
     profit_stor_delay: int | None = None
     profit_stop_limit_price: str | None = None
@@ -173,11 +173,14 @@ class CreateFuturesGridOrderData(CamelSchema):
 
 
 class CreateGridBotRequestSchema(CamelSchema):
-    base: str
-    quote: str
+    base: str = Field(description="Base currency", examples=["BTC", "ETH"])
+    quote: str = Field(description="Quote currency", examples=["USDT"])
 
     copy_from: str | None = None
     copy_type: str | None = None
     copy_bot_order_id: str | None = None
 
-    bu_order_data: CreateFuturesGridOrderData
+    bu_order_data: BuOrderDataObject
+
+
+class CreateGridBotResponseSchema(SuccessResponse[BuOrderDataObject]): ...

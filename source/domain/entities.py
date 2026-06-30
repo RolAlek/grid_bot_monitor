@@ -137,7 +137,7 @@ class Grid:
     levels: int
     trend: Trend
     grid_type: GridType
-    leverage: float
+    leverage: int
     investment: float
     status: GridLaunchStatus
     decision_verdict: DecisionVerdict
@@ -145,4 +145,7 @@ class Grid:
     created_at: datetime
     realized_pnl: float | None = None
     oid: str | None = None
+    external_id: str | None = None
     closed_at: datetime | None = None
+    stop_loss: float | None = None
+    take_profit: float | None = None
