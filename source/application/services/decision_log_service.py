@@ -2,6 +2,7 @@ from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 
 from source.domain.entities import DecisionVerdict
+from source.domain.exceptions import DecisionNotFoundError
 from source.domain.value_objects import Symbol
 from source.infrastructure.database.repositories.base import AbstractRepository
 from source.infrastructure.database.repositories.filters.base import BaseFieldCondition, BaseQueryFilter, Operator
@@ -29,3 +30,12 @@ class DecisionLogService:
 
         async with self._provider_decision_log_repository() as repository:
             return await repository.get_one(filters)
+
+    async def get_decision_by_oid(self, oid: str) -> DecisionVerdict:
+        async with self._provider_decision_log_repository() as repository:
+            verdict = await repository.get_by_oid(oid)
+
+        if not verdict:
+            raise DecisionNotFoundError(f"Decision with {oid} does not exist")
+
+        return verdict

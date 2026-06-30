@@ -16,6 +16,9 @@ class AbstractRepository[ET](ABC):
     async def get_one(self, filters: BaseQueryFilter) -> ET | None: ...
 
     @abstractmethod
+    async def get_by_oid(self, oid: str) -> ET | None: ...
+
+    @abstractmethod
     async def add(self, data: ET) -> ET: ...
 
 
@@ -33,6 +36,11 @@ class SQLAlchemyBaseRepository[ET, MT: DeclarativeBase](AbstractRepository[ET]):
         stmt = self._apply_filters(filters)
         stmt = stmt.limit(1)
         row = await self._session.scalar(stmt)
+        return self._to_entity(row) if row else None
+
+    async def get_by_oid(self, oid: str) -> ET | None:
+        row = await self._session.get(self._model, oid)
+
         return self._to_entity(row) if row else None
 
     async def add(self, data: ET) -> ET:
