@@ -41,18 +41,29 @@ class GridLaunchStatus(StrEnum):
 
 class Symbol(StrEnum):
     BTC = "BTC_USDT_PERP"
+    ETH = "ETH_USDT_PERP"
+    SOL = "SOL_USDT_PERP"
+    XRP = "XRP_USDT_PERP"
+    XAUT = "XAUT_USDT_PERP"
 
     @property
-    def get_quote(self) -> str:
+    def quote(self) -> str:
         return self.split("_")[0]
 
     @property
-    def get_base(self) -> str:
+    def base(self) -> str:
         return self.split("_")[1]
 
     @property
-    def get_type(self) -> str:
+    def type_(self) -> str:
         return self.split("_")[2]
+
+    @property
+    def regime(self) -> GridType:
+        if self in {self.XRP, self.XAUT}:
+            return GridType.ARITHMETIC
+
+        return GridType.GEOMETRIC
 
 
 @dataclass(frozen=True)
