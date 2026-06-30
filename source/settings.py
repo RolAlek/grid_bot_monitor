@@ -7,8 +7,6 @@ from typing import Any
 from pydantic import HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from source.domain.value_objects import Symbol
-
 
 class LogLevel(StrEnum):
     DEBUG = "DEBUG"
@@ -46,8 +44,6 @@ class PionexSettings(_BaseSettings):
     api_key: SecretStr
     api_secret: SecretStr
     timeout: float = 10
-
-    symbol: Symbol = Symbol.BTC
     kline_interval: str = "4H"
     limit: int = 500
 

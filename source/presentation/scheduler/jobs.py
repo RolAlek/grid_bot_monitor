@@ -4,6 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from source.application.services.run_daily_positioning_check import RunDailyPositioningCheck
 from source.application.services.run_weekly_full_assessment import RunWeeklyFullAssessment
+from source.domain.value_objects import Symbol
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -33,13 +34,15 @@ def register_jobs(  # type: ignore[no-any-unimported]
 
 async def _run_daily(runner: RunDailyPositioningCheck) -> None:
     try:
-        await runner.run()
+        for symbol in Symbol:
+            await runner.run(symbol)
     except Exception:
         logger.exception("Daily positioning check failed")
 
 
 async def _run_weekly(runner: RunWeeklyFullAssessment) -> None:
     try:
-        await runner.run()
+        for symbol in Symbol:
+            await runner.run(symbol)
     except Exception:
         logger.exception("Weekly full assessment failed")

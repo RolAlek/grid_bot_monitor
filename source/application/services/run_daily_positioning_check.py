@@ -26,8 +26,7 @@ class RunDailyPositioningCheck:
         self._notifier = notifier
         self._settings = settings
 
-    async def run(self) -> GateResult:
-        symbol = self._settings.pionex.symbol
+    async def run(self, symbol: Symbol) -> GateResult:
         logger.info("Daily positioning check started", symbol=symbol.value)
 
         second_gate_result = await self._second_gate.execute(symbol)

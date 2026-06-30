@@ -13,11 +13,10 @@ from source.domain.value_objects import Symbol
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
-def decision_router(
+def decision_router(  # noqa: C901
     weekly_runner: RunWeeklyFullAssessment,
     daily_runner: RunDailyPositioningCheck,
     decision_service: DecisionLogService,
-    symbol: Symbol = Symbol.BTC,
 ) -> Router:
     router = Router(name="decision")
 
@@ -30,7 +29,8 @@ def decision_router(
         await message.answer("Running full assessment — this may take a few seconds...")
         try:
             async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
-                await weekly_runner.run()
+                for symbol in Symbol:
+                    await weekly_runner.run(symbol)
         except Exception:
             logger.exception("Full assessment was failed")
             await message.answer("Assessment failed — check logs for details.")
@@ -44,7 +44,8 @@ def decision_router(
         await message.answer("Running daily assessment — this may take a few seconds...")
         try:
             async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
-                await daily_runner.run()
+                for symbol in Symbol:
+                    await daily_runner.run(symbol)
         except Exception:
             logger.exception("Daily assessment was failed")
             await message.answer("Daily assessment failed — check logs")
@@ -52,7 +53,7 @@ def decision_router(
     @router.message(Command("verdict"))
     async def handle_verdict(message: Message) -> None:
         async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
-            verdict = await decision_service.get_last_decision(symbol)
+            verdict = await decision_service.get_last_decision(Symbol.BTC)
             if verdict is None:
                 await message.answer("No verdict on record yet. Run /assess first.")
                 return

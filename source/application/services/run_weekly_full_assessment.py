@@ -32,8 +32,7 @@ class RunWeeklyFullAssessment:
         self._notifier = notifier
         self._settings = settings
 
-    async def run(self) -> DecisionVerdict:
-        symbol = self._settings.pionex.symbol
+    async def run(self, symbol: Symbol) -> DecisionVerdict:
         logger.info("Weekly full assessment started", symbol=symbol.value)
 
         first_gate_result, proposal = await self._gate1.execute(symbol)
