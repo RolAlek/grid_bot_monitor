@@ -67,23 +67,10 @@ class IndicatorSet:
     last_price: float
     swing_high_14d: float
     swing_low_14d: float
-    # Realized-vol term structure — computed by IndicatorService, consumed by Gate 1
+
     realized_vol_1d: float
     realized_vol_7d: float
     realized_vol_30d: float
-
-
-@dataclass(frozen=True)
-class DecisionVerdict:
-    symbol: Symbol
-    as_of: datetime
-    action: VerdictAction
-    gates: tuple[GateResult, ...]
-    oid: str | None = None
-    notes: str | None = None
-
-    # Suggested parameters
-    suggested_parameters: ProposedGridParams | None = None
 
 
 @dataclass(frozen=True)
@@ -122,8 +109,17 @@ class OpenInterest:
 
 
 @dataclass(frozen=True)
-class IndexPrice:
-    pass
+class DecisionVerdict:
+    symbol: Symbol
+    action: VerdictAction
+    gates: tuple[GateResult, ...]
+
+    oid: str | None = None
+    created_at: datetime | None = None
+    notes: str | None = None
+
+    # Suggested parameters
+    suggested_parameters: ProposedGridParams | None = None
 
 
 @dataclass
@@ -137,7 +133,6 @@ class Grid:
     leverage: int
     investment: float
     status: GridLaunchStatus
-
     decision_verdict_oid: str
 
     oid: str | None = None
