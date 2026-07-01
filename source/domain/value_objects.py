@@ -1,6 +1,4 @@
-from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
-from typing import Any
 
 
 class GateStatus(IntEnum):
@@ -64,18 +62,3 @@ class Symbol(StrEnum):
             return GridType.ARITHMETIC
 
         return GridType.GEOMETRIC
-
-
-@dataclass(frozen=True)
-class GateRule:
-    triggered: bool
-    status: GateStatus
-    message: str
-
-
-@dataclass(frozen=True)
-class GateResult:
-    gate: Gate
-    status: GateStatus
-    reasons: tuple[str, ...]
-    raw_values: dict[str, Any]

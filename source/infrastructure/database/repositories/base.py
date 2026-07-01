@@ -1,15 +1,6 @@
 from abc import ABC, abstractmethod
 
-from source.domain.entities import DecisionVerdict
 from source.infrastructure.database.repositories.filters import BaseQueryFilter
-
-
-class Notifier(ABC):
-    @abstractmethod
-    async def send_alert(self, verdict: DecisionVerdict) -> None: ...
-
-    @abstractmethod
-    async def send_digest(self, verdict: DecisionVerdict) -> None: ...
 
 
 class AbstractRepository[ET](ABC):

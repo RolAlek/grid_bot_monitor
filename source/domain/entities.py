@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
 from source.domain.exceptions import InvalidGridParamsError
-from source.domain.value_objects import GateResult, GridLaunchStatus, GridType, Symbol, Trend, VerdictAction
+from source.domain.value_objects import Gate, GateStatus, GridLaunchStatus, GridType, Symbol, Trend, VerdictAction
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,14 @@ class OpenInterest:
 
 
 @dataclass(frozen=True)
+class GateResult:
+    gate: Gate
+    status: GateStatus
+    reasons: tuple[str, ...]
+    raw_values: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class DecisionVerdict:
     symbol: Symbol
     action: VerdictAction
@@ -142,3 +151,10 @@ class Grid:
     closed_at: datetime | None = None
     stop_loss: float | None = None
     take_profit: float | None = None
+
+
+@dataclass(frozen=True)
+class GateRule:
+    triggered: bool
+    status: GateStatus
+    message: str

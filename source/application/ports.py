@@ -1,49 +1,17 @@
-from abc import abstractmethod
-from typing import Protocol
+from abc import ABC, abstractmethod
 
-from source.domain.entities import (
-    Candle,
-    DecisionVerdict,
-    FundingRate,
-    Grid,
-    LiquidationEstimate,
-    OpenInterest,
-    ProposedGridParams,
-)
-from source.domain.value_objects import GateResult, GateStatus, Symbol
+from source.domain.entities import DecisionVerdict, GateResult
+from source.domain.value_objects import GateStatus
 
 
-class MarketDataPort(Protocol):
+class Notifier(ABC):
     @abstractmethod
-    async def get_candles(
+    async def send_alert(
         self,
-        symbol: Symbol,
-        interval: str,
-        limit: int,
-    ) -> list[Candle]: ...
+        verdict: GateResult,
+        prev_status: GateStatus | None = None,
+        previous_message_id: int | None = None,
+    ) -> None: ...
 
     @abstractmethod
-    async def get_funding_rates(
-        self,
-        symbol: Symbol,
-        limit: int,
-    ) -> list[FundingRate]: ...
-
-    @abstractmethod
-    async def get_open_interest(self, symbol: Symbol) -> OpenInterest: ...
-
-
-class NotifierPort(Protocol):
-    @abstractmethod
-    async def send_alert(self, result: GateResult, prev_status: GateStatus | None) -> None: ...
-
-    @abstractmethod
-    async def send_digest(self, verdict: DecisionVerdict) -> None: ...
-
-
-class GridPort(Protocol):
-    @abstractmethod
-    async def check_grid_params(self, params: ProposedGridParams) -> LiquidationEstimate: ...
-
-    @abstractmethod
-    async def create_grid(self, verdict: DecisionVerdict) -> Grid: ...
+    async def send_digest(self, verdict: DecisionVerdict, previous_message_id: int | None = None) -> None: ...
