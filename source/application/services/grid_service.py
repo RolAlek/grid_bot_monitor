@@ -6,7 +6,7 @@ from source.domain.entities import DecisionVerdict, Grid
 from source.domain.exceptions import DecisionNotFoundError
 from source.domain.value_objects import GridLaunchStatus, Symbol
 from source.infrastructure.database.repositories.base import AbstractRepository
-from source.infrastructure.database.repositories.filters.base import BaseFieldCondition, BaseQueryFilter, Operator
+from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
 
 
 class GridBotService:
@@ -43,7 +43,7 @@ class GridBotService:
         if not verdict:
             raise DecisionNotFoundError(f"Decision with {verdict_oid} does not exist")
 
-        api_result = await self._grid_port.create_grid(verdict)
+        api_result = await self._grid_port.place_grid(verdict)
 
         return await self.persist_grid(api_result)
 

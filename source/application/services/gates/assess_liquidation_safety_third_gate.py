@@ -3,8 +3,8 @@ import structlog
 from source.application.ports import GridPort
 from source.application.use_cases.liquidation_safety_checks import build_liquidation_safety_checks
 from source.application.utils import evaluate_checks
-from source.domain.entities import ProposedGridParams
-from source.domain.value_objects import Gate, GateResult
+from source.domain.entities import GateResult, ProposedGridParams
+from source.domain.value_objects import Gate
 from source.settings import DecisionEngineSettings
 
 

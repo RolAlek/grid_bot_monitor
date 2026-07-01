@@ -2,8 +2,8 @@ from dataclasses import asdict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from source.domain.entities import DecisionVerdict
-from source.domain.value_objects import Gate, GateResult, GateStatus, Symbol, VerdictAction
+from source.domain.entities import DecisionVerdict, GateResult
+from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
 from source.infrastructure.database.models import DecisionLog
 from source.infrastructure.database.repositories.alchemy.base import SQLAlchemyBaseRepository
 

@@ -2,13 +2,13 @@ from datetime import UTC, datetime
 
 import structlog
 
-from source.application.ports import NotifierPort
+from source.application.ports import Notifier
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.gates.assess_liquidation_safety_third_gate import AssessLiquidationSafetyService
 from source.application.services.gates.assess_market_regime_first_gate import AssessMarketRegimeService
 from source.application.services.gates.assess_positioning_second_gate import AssessPositioningService
-from source.domain.entities import DecisionVerdict, ProposedGridParams
-from source.domain.value_objects import GateResult, GateStatus, Symbol, VerdictAction
+from source.domain.entities import DecisionVerdict, GateResult, ProposedGridParams
+from source.domain.value_objects import GateStatus, Symbol, VerdictAction
 from source.settings import Settings
 
 
@@ -22,7 +22,7 @@ class RunWeeklyFullAssessment:
         gate1: AssessMarketRegimeService,
         gate2: AssessPositioningService,
         gate3: AssessLiquidationSafetyService,
-        notifier: NotifierPort,
+        notifier: Notifier,
         settings: Settings,
     ) -> None:
         self._decision_service = decision_service
@@ -32,7 +32,7 @@ class RunWeeklyFullAssessment:
         self._notifier = notifier
         self._settings = settings
 
-    async def run(self, symbol: Symbol) -> DecisionVerdict:
+    async def run(self, symbol: Symbol, message_id: int | None = None) -> DecisionVerdict:
         logger.info("Weekly full assessment started", symbol=symbol.value)
 
         first_gate_result, proposal = await self._gate1.execute(symbol)
@@ -57,7 +57,7 @@ class RunWeeklyFullAssessment:
 
         logger.info("Verdict resolved", action=verdict.action.value)
         verdict = await self._decision_service.persist_verdict(verdict)
-        await self._notifier.send_digest(verdict)
+        await self._notifier.send_digest(verdict, message_id)
 
         return verdict
 
@@ -77,7 +77,7 @@ class RunWeeklyFullAssessment:
             action = VerdictAction.REVIEW
 
         return DecisionVerdict(
-            as_of=datetime.now(UTC),
+            created_at=datetime.now(UTC),
             symbol=symbol,
             action=action,
             gates=tuple(gates),
