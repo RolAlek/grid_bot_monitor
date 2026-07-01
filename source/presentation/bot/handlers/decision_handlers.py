@@ -8,6 +8,7 @@ from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.run_daily_positioning_check import RunDailyPositioningCheck
 from source.application.services.run_weekly_full_assessment import RunWeeklyFullAssessment
 from source.domain.value_objects import Symbol
+from source.utils.ensure import ensure
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -25,8 +26,10 @@ def decision_router(  # noqa: C901
         logger.info(
             "Manual /weekly_assessment requested",
             user_id=message.from_user.id if message.from_user else "unknown",
+            user_name=message.from_user.username if message.from_user else "unknown",
         )
-        await message.answer("Running full assessment — this may take a few seconds...")
+        await message.reply("Running full assessment — this may take a few seconds...")
+
         try:
             async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
                 for symbol in Symbol:
@@ -59,7 +62,10 @@ def decision_router(  # noqa: C901
                 return
 
             lines = [
-                f"Last verdict: {verdict.action.value.upper()} ({verdict.as_of.strftime('%Y-%m-%d %H:%M UTC')})",
+                (
+                    f"Last verdict: {verdict.action.value.upper()} "
+                    f"({ensure(verdict.created_at).strftime('%Y-%m-%d %H:%M UTC')})"
+                ),
             ]
             for gate in verdict.gates:
                 reason = gate.reasons[0] if gate.reasons else "ok"

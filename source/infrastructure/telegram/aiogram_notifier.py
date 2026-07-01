@@ -24,43 +24,20 @@ class AiogramNotifier(Notifier):
         self,
         result: GateResult,
         prev_status: GateStatus | None = None,
-        previous_message_id: int | None = None,
     ) -> None:
-        await self._send_message(
-            text=self._formatter.format_alert(result, prev_status),
-            chat_id=self._chat_id,
-            previous_message_id=previous_message_id,
-        )
+        await self._send_message(text=self._formatter.format_alert(result, prev_status), chat_id=self._chat_id)
 
-    async def send_digest(self, verdict: DecisionVerdict, previous_message_id: int | None = None) -> None:
-
+    async def send_digest(self, verdict: DecisionVerdict) -> None:
         kb = build_verdict_reaction_kb(ensure(verdict.oid)) if verdict.action == VerdictAction.LAUNCH else None
-
-        await self._send_message(
-            text=self._formatter.format_digest(verdict),
-            chat_id=self._chat_id,
-            previous_message_id=previous_message_id,
-            keyboard=kb,
-        )
+        await self._send_message(text=self._formatter.format_digest(verdict), chat_id=self._chat_id, keyboard=kb)
 
     async def _send_message(
         self,
         text: str,
         chat_id: int | str,
-        previous_message_id: int | None = None,
         keyboard: InlineKeyboardMarkup | None = None,
     ) -> None:
         try:
-            if previous_message_id is not None:
-                await self._bot.edit_message_text(
-                    chat_id=chat_id,
-                    message_id=previous_message_id,
-                    text=text,
-                    parse_mode="HTML",
-                    reply_markup=keyboard,
-                )
-                return
-
             await self._bot.send_message(
                 chat_id=chat_id,
                 text=text,
