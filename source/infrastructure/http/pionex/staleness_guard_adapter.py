@@ -1,12 +1,12 @@
 from datetime import UTC, datetime
 
-from source.application.ports import GridPort
 from source.domain.entities import LiquidationEstimate, ProposedGridParams
+from source.infrastructure.http.pionex.pionex_http_client import PionexHTTPClient
 
 
-class StalenessGuardAdapter(GridPort):
-    def __init__(self, delegate: GridPort, ttl_seconds: int = 120) -> None:
-        self._delegate = delegate
+class StalenessGuardAdapter:
+    def __init__(self, pionex_client: PionexHTTPClient, ttl_seconds: int = 120) -> None:
+        self._delegate = pionex_client
         self._ttl = ttl_seconds
         self._cache: dict[ProposedGridParams, tuple[datetime, LiquidationEstimate]] = {}
 

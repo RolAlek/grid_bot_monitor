@@ -36,6 +36,7 @@ from source.infrastructure.http.pionex.models.models import (
     GetOpenInterestsResponseSchema,
     SLTPType,
 )
+from source.utils.ensure import ensure
 
 
 class PionexHTTPClient(BaseHTTPClient):
@@ -86,7 +87,7 @@ class PionexHTTPClient(BaseHTTPClient):
             estimate_liquidation_price_down=data.estimate_liquidation_price_down,
         )
 
-    async def create_grid(self, verdict: DecisionVerdict) -> Grid:
+    async def place_grid(self, verdict: DecisionVerdict) -> Grid:
         params = verdict.suggested_parameters
 
         if not params:
@@ -137,8 +138,8 @@ class PionexHTTPClient(BaseHTTPClient):
             leverage=response.data.leverage,
             investment=response.data.leverage,
             status=GridLaunchStatus.RUNNING,
-            decision_verdict=verdict,
             created_at=datetime.now(UTC),
+            decision_verdict_oid=ensure(verdict.oid),
         )
 
     async def get_candles(self, symbol: Symbol, interval: str, limit: int) -> list[Candle]:
