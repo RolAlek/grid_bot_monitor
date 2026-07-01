@@ -24,7 +24,7 @@ class RunDailyPositioningCheck:
         self._notifier = notifier
         self._settings = settings
 
-    async def run(self, symbol: Symbol, message_id: int | None = None) -> GateResult:
+    async def run(self, symbol: Symbol) -> GateResult:
         logger.info("Daily positioning check started", symbol=symbol.value)
 
         result = await self._second_gate.execute(symbol)
@@ -43,15 +43,10 @@ class RunDailyPositioningCheck:
             )
         )
 
-        await self._send_alert(symbol, result, message_id)
+        await self._send_alert(symbol, result)
         return result
 
-    async def _send_alert(
-        self,
-        symbol: Symbol,
-        result: GateResult,
-        message_id: int | None = None,
-    ) -> None:
+    async def _send_alert(self, symbol: Symbol, result: GateResult) -> None:
         prev_status = await self._previous_gate2_status(symbol)
 
         if result.status != prev_status:
@@ -60,7 +55,7 @@ class RunDailyPositioningCheck:
                 prev=prev_status.name if prev_status else None,
                 now=result.status.name,
             )
-            await self._notifier.send_alert(result, prev_status, message_id)
+            await self._notifier.send_alert(result, prev_status)
 
     async def _previous_gate2_status(self, symbol: Symbol) -> GateStatus | None:
         last = await self._decision_service.get_last_decision(symbol)

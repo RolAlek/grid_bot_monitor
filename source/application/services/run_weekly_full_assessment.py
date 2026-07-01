@@ -32,7 +32,7 @@ class RunWeeklyFullAssessment:
         self._notifier = notifier
         self._settings = settings
 
-    async def run(self, symbol: Symbol, message_id: int | None = None) -> DecisionVerdict:
+    async def run(self, symbol: Symbol) -> DecisionVerdict:
         logger.info("Weekly full assessment started", symbol=symbol.value)
 
         first_gate_result, proposal = await self._gate1.execute(symbol)
@@ -57,7 +57,7 @@ class RunWeeklyFullAssessment:
 
         logger.info("Verdict resolved", action=verdict.action.value)
         verdict = await self._decision_service.persist_verdict(verdict)
-        await self._notifier.send_digest(verdict, message_id)
+        await self._notifier.send_digest(verdict)
 
         return verdict
 
