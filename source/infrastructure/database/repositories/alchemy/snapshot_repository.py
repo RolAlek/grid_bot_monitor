@@ -4,6 +4,7 @@ from structlog import get_logger
 from structlog.stdlib import BoundLogger
 
 from source.domain.entities import FundingOiSnapshot
+from source.domain.exceptions import DuplicateOISnapshotError
 from source.domain.value_objects import Symbol
 from source.infrastructure.database.models.models import OISnapshot
 from source.infrastructure.database.repositories.alchemy.base import SQLAlchemyBaseRepository
@@ -19,7 +20,7 @@ class SQLAlchemySnapshotRepository(SQLAlchemyBaseRepository[FundingOiSnapshot, O
     def _as_entity(self, row: OISnapshot) -> FundingOiSnapshot:
         return FundingOiSnapshot(
             symbol=Symbol(row.symbol),
-            as_of=row.created_at,
+            created_at=row.created_at,
             funding_rate_last=row.funding_rate_last,
             open_interest=row.open_interest,
             oi_pct_change_7d=row.oi_pct_change_7d,
@@ -42,6 +43,11 @@ class SQLAlchemySnapshotRepository(SQLAlchemyBaseRepository[FundingOiSnapshot, O
                 logger.warning(
                     "Duplicate OI snapshot — skipping duplicate write",
                     symbol=data.symbol.value,
-                    date=data.as_of.date(),
+                    date=data.created_at.date(),
                 )
+                raise DuplicateOISnapshotError(
+                    f"Duplicate OI snapshot for {data.symbol.value} on {data.created_at.date()}",
+                    original_error=error,
+                ) from error
+
             raise

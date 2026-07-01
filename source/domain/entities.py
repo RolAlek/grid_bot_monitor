@@ -77,7 +77,7 @@ class IndicatorSet:
 @dataclass(frozen=True)
 class FundingOiSnapshot:
     symbol: Symbol
-    as_of: datetime
+    created_at: datetime
     funding_rate_last: float
     open_interest: float
     oi_pct_change_7d: float | None  # None until 7 days of stored history exist

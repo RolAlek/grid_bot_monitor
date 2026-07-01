@@ -4,7 +4,7 @@ from contextlib import AbstractAsyncContextManager
 from source.domain.entities import DecisionVerdict
 from source.domain.value_objects import Symbol
 from source.infrastructure.database.repositories.base import AbstractRepository
-from source.infrastructure.database.repositories.filters.base import BaseFieldCondition, BaseQueryFilter, Operator
+from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
 
 
 class DecisionLogService:
