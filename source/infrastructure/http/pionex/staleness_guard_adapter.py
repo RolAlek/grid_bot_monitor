@@ -1,12 +1,12 @@
 from datetime import UTC, datetime
 
-from source.domain.entities import LiquidationEstimate, ProposedGridParams
-from source.infrastructure.http.pionex.pionex_http_client import PionexHTTPClient
+from source.application.ports import GridPort
+from source.domain.entities import DecisionVerdict, Grid, LiquidationEstimate, ProposedGridParams
 
 
 class StalenessGuardAdapter:
-    def __init__(self, pionex_client: PionexHTTPClient, ttl_seconds: int = 120) -> None:
-        self._delegate = pionex_client
+    def __init__(self, delegate: GridPort, ttl_seconds: int = 120) -> None:
+        self._delegate = delegate
         self._ttl = ttl_seconds
         self._cache: dict[ProposedGridParams, tuple[datetime, LiquidationEstimate]] = {}
 
@@ -21,3 +21,6 @@ class StalenessGuardAdapter:
         estimate = await self._delegate.check_grid_params(params)
         self._cache[params] = (now, estimate)
         return estimate
+
+    async def place_grid(self, verdict: DecisionVerdict) -> Grid:
+        return await self._delegate.place_grid(verdict)

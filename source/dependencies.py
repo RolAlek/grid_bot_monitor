@@ -11,14 +11,18 @@ from source.application.services.gates.assess_liquidation_safety_third_gate impo
 from source.application.services.gates.assess_market_regime_first_gate import AssessMarketRegimeService
 from source.application.services.gates.assess_positioning_second_gate import AssessPositioningService
 from source.application.services.grid_builder import GridProposalBuilder
+from source.application.services.grid_service import GridBotService
 from source.application.services.indicator_service import IndicatorService
 from source.application.services.oi_snapshot_service import OISnapshotService
 from source.application.services.run_daily_positioning_check import RunDailyPositioningCheck
 from source.application.services.run_weekly_full_assessment import RunWeeklyFullAssessment
 from source.infrastructure.database.engine import async_session_factory
-from source.infrastructure.database.repositories.base import SQLAlchemyBaseRepository
-from source.infrastructure.database.repositories.decision_repository import SQLAlchemyDecisionLogRepository
-from source.infrastructure.database.repositories.oi_repository import SQLAlchemySnapshotRepository
+from source.infrastructure.database.repositories.alchemy.base import SQLAlchemyBaseRepository
+from source.infrastructure.database.repositories.alchemy.decision_repository import SQLAlchemyDecisionLogRepository
+from source.infrastructure.database.repositories.alchemy.launched_grid_repository import (
+    SQLAlchemyLaunchedGridRepository,
+)
+from source.infrastructure.database.repositories.alchemy.snapshot_repository import SQLAlchemySnapshotRepository
 from source.infrastructure.http.pionex.auth_strategy import CustomPionexAuth
 from source.infrastructure.http.pionex.pionex_http_client import PionexHTTPClient
 from source.infrastructure.http.pionex.staleness_guard_adapter import StalenessGuardAdapter
@@ -68,7 +72,8 @@ def get_pionex_client() -> PionexHTTPClient:
 @cache
 def get_snapshot_service() -> OISnapshotService:
     return OISnapshotService(
-        provider_oi_snapshot_repository=create_service_provider_dependency(SQLAlchemySnapshotRepository)
+        provider_oi_snapshot_repository=create_service_provider_dependency(SQLAlchemySnapshotRepository),
+        market_data_client=get_pionex_client(),
     )
 
 
@@ -80,13 +85,21 @@ def get_decision_service() -> DecisionLogService:
 
 
 @cache
+def get_launch_service() -> GridBotService:
+    return GridBotService(
+        provider_launch_grid_repository=create_service_provider_dependency(SQLAlchemyLaunchedGridRepository),
+        provider_decision_log_repository=create_service_provider_dependency(SQLAlchemyDecisionLogRepository),
+        grid_port=get_pionex_client(),
+    )
+
+
+@cache
 def get_first_gate_service() -> AssessMarketRegimeService:
     settings = get_settings()
 
     return AssessMarketRegimeService(
         settings=settings,
-        market_data=get_pionex_client(),
-        indicator_service=IndicatorService(),
+        indicator_service=IndicatorService(settings=settings.pionex, market_data=get_pionex_client()),
         grid_builder=GridProposalBuilder(settings.decision_engine),
     )
 

@@ -10,8 +10,8 @@ from source.presentation.bot.keyboards.inlines import ApplyDecisionCD, Mode
 logger: structlog.stdlib.BoundLogger = get_logger(__name__)
 
 
-def launch_grid_factory(grid_launch_service: GridBotService) -> Router:
-    router = Router(name="launch")
+def grid_router(grid_launch_service: GridBotService) -> Router:
+    router = Router(name="grid")
 
     @router.callback_query(ApplyDecisionCD.filter(F.mode == Mode.AUTO))
     async def handle_auto_launch_callback(callback_query: CallbackQuery, callback_data: ApplyDecisionCD) -> None:

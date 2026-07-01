@@ -171,7 +171,7 @@ class PionexHTTPClient(BaseHTTPClient):
             for candle in response.data.candles
         ]
 
-    async def get_funding_rates(self, symbol: Symbol, limit: int) -> list[FundingRate]:
+    async def get_funding_rates(self, symbol: Symbol, limit: int = 1) -> list[FundingRate]:
         try:
             response = await self.get(
                 path="/api/v1/market/fundingRates",

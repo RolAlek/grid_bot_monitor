@@ -11,7 +11,7 @@ from source.domain.entities import (
     OpenInterest,
     ProposedGridParams,
 )
-from source.domain.value_objects import GateStatus
+from source.domain.value_objects import GateStatus, Symbol
 
 
 class Notifier(ABC):
@@ -24,13 +24,13 @@ class Notifier(ABC):
 
 class MarketDataPort(Protocol):
     @abstractmethod
-    async def get_funding_rates(self, symbol: str, limit: int = 1) -> list[FundingRate]: ...
+    async def get_funding_rates(self, symbol: Symbol, limit: int = 1) -> list[FundingRate]: ...
 
     @abstractmethod
-    async def get_open_interest(self, symbol: str) -> OpenInterest: ...
+    async def get_open_interest(self, symbol: Symbol) -> OpenInterest: ...
 
     @abstractmethod
-    async def get_candles(self, symbol: str, interval: str, limit: int) -> list[Candle]: ...
+    async def get_candles(self, symbol: Symbol, interval: str, limit: int) -> list[Candle]: ...
 
 
 class GridPort(Protocol):

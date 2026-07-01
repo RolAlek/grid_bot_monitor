@@ -12,7 +12,7 @@ from source.application.exceptions import InsufficientKlineDataError, Unsupporte
 from source.application.ports import MarketDataPort
 from source.domain.entities import Candle, IndicatorSet
 from source.domain.value_objects import Symbol
-from source.settings import Settings
+from source.settings import PionexSettings
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -30,12 +30,12 @@ class IndicatorService:
     }
     _MIN_LOOKBACK_DAYS = 31
 
-    def __init__(self, settings: Settings, market_data: MarketDataPort) -> None:
+    def __init__(self, settings: PionexSettings, market_data: MarketDataPort) -> None:
         self._settings = settings
         self._market_data = market_data
 
     async def compute(self, symbol: Symbol) -> IndicatorSet:
-        interval = self._settings.pionex.kline_interval
+        interval = self._settings.kline_interval
 
         if interval not in self._INTERVAL_CANDLES_PER_DAY:
             raise UnsupportedIntervalError(f"No candles-per-day mapping for interval={interval!r}")
@@ -95,8 +95,8 @@ class IndicatorService:
         try:
             return await self._market_data.get_candles(
                 symbol,
-                interval=self._settings.pionex.kline_interval,
-                limit=self._settings.pionex.limit,
+                interval=self._settings.kline_interval,
+                limit=self._settings.limit,
             )
         except Exception:
             logger.exception("Failed to fetch market data", symbol=symbol.value)
