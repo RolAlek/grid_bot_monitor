@@ -5,7 +5,7 @@ from sqlalchemy import ColumnElement, asc, desc
 from sqlalchemy.orm import DeclarativeBase, InstrumentedAttribute
 from sqlalchemy.sql import Select
 
-from source.infrastructure.database.repositories.filters.base import BaseFieldCondition, BaseQueryFilter
+from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter
 
 
 @dataclass(frozen=True, slots=True)

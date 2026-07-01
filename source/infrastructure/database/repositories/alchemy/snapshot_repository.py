@@ -6,7 +6,7 @@ from structlog.stdlib import BoundLogger
 from source.domain.entities import FundingOiSnapshot
 from source.domain.value_objects import Symbol
 from source.infrastructure.database.models.models import OISnapshot
-from source.infrastructure.database.repositories.base import SQLAlchemyBaseRepository
+from source.infrastructure.database.repositories.alchemy.base import SQLAlchemyBaseRepository
 
 
 logger: BoundLogger = get_logger(__name__)
@@ -16,7 +16,7 @@ class SQLAlchemySnapshotRepository(SQLAlchemyBaseRepository[FundingOiSnapshot, O
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, OISnapshot)
 
-    def _to_entity(self, row: OISnapshot) -> FundingOiSnapshot:
+    def _as_entity(self, row: OISnapshot) -> FundingOiSnapshot:
         return FundingOiSnapshot(
             symbol=Symbol(row.symbol),
             as_of=row.created_at,
@@ -25,7 +25,7 @@ class SQLAlchemySnapshotRepository(SQLAlchemyBaseRepository[FundingOiSnapshot, O
             oi_pct_change_7d=row.oi_pct_change_7d,
         )
 
-    def _from_entity(self, data: FundingOiSnapshot) -> OISnapshot:
+    def _as_orm_model(self, data: FundingOiSnapshot) -> OISnapshot:
         return OISnapshot(
             symbol=data.symbol.value,
             funding_rate_last=data.funding_rate_last,

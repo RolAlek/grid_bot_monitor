@@ -3,14 +3,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from source.domain.entities import Grid
 from source.domain.value_objects import GridLaunchStatus, GridType, Symbol, Trend
 from source.infrastructure.database.models.models import GridLaunchModel
-from source.infrastructure.database.repositories.base import SQLAlchemyBaseRepository
+from source.infrastructure.database.repositories.alchemy.base import SQLAlchemyBaseRepository
 
 
 class SQLAlchemyLaunchedGridRepository(SQLAlchemyBaseRepository[Grid, GridLaunchModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, GridLaunchModel)
 
-    def _to_entity(self, row: GridLaunchModel) -> Grid:
+    def _as_entity(self, row: GridLaunchModel) -> Grid:
 
         return Grid(
             oid=row.oid,
@@ -23,16 +23,16 @@ class SQLAlchemyLaunchedGridRepository(SQLAlchemyBaseRepository[Grid, GridLaunch
             leverage=row.grid_leverage,
             investment=row.quote_investment,
             status=GridLaunchStatus(row.status),
-            created_at=row.created_at,
             closed_at=row.closed_at,
             realized_pnl=row.realized_pnl,
             decision_verdict_oid=row.decision_verdict_oid,
             stop_loss=row.stop_loss,
             take_profit=row.take_profit,
             external_id=row.external_id,
+            created_at=row.created_at,
         )
 
-    def _from_entity(self, data: Grid) -> GridLaunchModel:
+    def _as_orm_model(self, data: Grid) -> GridLaunchModel:
         return GridLaunchModel(
             symbol=data.symbol.value,
             grid_top=data.top,
