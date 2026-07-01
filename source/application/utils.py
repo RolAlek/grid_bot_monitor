@@ -1,4 +1,5 @@
-from source.domain.value_objects import GateRule, GateStatus
+from source.domain.entities import GateRule
+from source.domain.value_objects import GateStatus
 
 
 def evaluate_checks(checks: list[GateRule]) -> tuple[GateStatus, tuple[str, ...]]:
