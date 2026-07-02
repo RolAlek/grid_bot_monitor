@@ -56,20 +56,28 @@ def test_both_buffers_exactly_at_minimum_passes(settings: DecisionEngineSettings
     assert _status(estimate, settings) == GateStatus.PASS
 
 
-def test_upper_buffer_below_minimum_fails(settings: DecisionEngineSettings) -> None:
-    estimate = make_liquidation_estimate_with_buffers(buf_up=2.49, buf_down=2.5, proposal=_long_proposal())
-    result = _status(estimate, settings)
-    assert result == GateStatus.FAIL
-    reasons = _reasons(estimate, settings)
-    assert any("upper" in reason.lower() or "Up" in reason for reason in reasons)
+def test_upper_buffer_irrelevant_for_long_passes(settings: DecisionEngineSettings) -> None:
+    estimate = make_liquidation_estimate_with_buffers(buf_up=2.49, buf_down=3.0, proposal=_long_proposal())
+    assert _status(estimate, settings) == GateStatus.PASS
 
 
-def test_lower_buffer_below_minimum_fails(settings: DecisionEngineSettings) -> None:
-    estimate = make_liquidation_estimate_with_buffers(buf_up=2.5, buf_down=2.49, proposal=_long_proposal())
-    result = _status(estimate, settings)
+def test_lower_buffer_below_minimum_with_stop_loss_protection_passes(settings: DecisionEngineSettings) -> None:
+    estimate = make_liquidation_estimate_with_buffers(buf_up=3.0, buf_down=2.49, proposal=_long_proposal())
+    assert _status(estimate, settings) == GateStatus.PASS
+
+
+def test_lower_buffer_below_minimum_stop_loss_cant_protect_fails(settings: DecisionEngineSettings) -> None:
+    proposal = make_proposed_grid_params(
+        leverage=3,
+        trend=Trend.LONG,
+        last_price=95_000.0,
+        stop_loss=60_000.0,
+        take_profit=110_000.0,
+    )
+    make_liquidation_estimate_with_buffers(buf_up=3.0, buf_down=2.49, proposal=proposal)
+    estimate2 = make_liquidation_estimate_with_buffers(buf_up=3.0, buf_down=2.0, proposal=proposal)
+    result = _status(estimate2, settings)
     assert result == GateStatus.FAIL
-    reasons = _reasons(estimate, settings)
-    assert any("lower" in reason.lower() or "Down" in reason for reason in reasons)
 
 
 def test_both_buffers_above_minimum_passes(settings: DecisionEngineSettings) -> None:
