@@ -49,13 +49,17 @@ def build_liquidation_safety_checks(
             GateRule(
                 triggered=down is not None and proposal.stop_loss <= down,
                 status=GateStatus.FAIL,
-                message=f"Stop-loss {proposal.stop_loss:.2f} at/below liquidation {down:.2f}",
+                message=f"Stop-loss {proposal.stop_loss:.2f} at/below liquidation {down:.2f}"
+                if down is not None
+                else "",
             ),
             GateRule(
                 triggered=(proposal.last_price - proposal.stop_loss) < min_distance,
                 status=GateStatus.CAUTION,
                 message=STOP_LOSS_TOO_CLOSE.format(
-                    stop_lose=proposal.stop_loss, price=proposal.last_price, min_distance_pct=min_distance_pct
+                    stop_loss=proposal.stop_loss,
+                    price=proposal.last_price,
+                    min_distance_pct=min_distance_pct,
                 ),
             ),
             GateRule(
@@ -73,13 +77,15 @@ def build_liquidation_safety_checks(
             GateRule(
                 triggered=up is not None and proposal.stop_loss >= up,
                 status=GateStatus.FAIL,
-                message=f"Stop-loss {proposal.stop_loss:.2f} at/above liquidation {up:.2f}",
+                message=f"Stop-loss {proposal.stop_loss:.2f} at/above liquidation {up:.2f}" if up is not None else "",
             ),
             GateRule(
                 triggered=(proposal.stop_loss - proposal.last_price) < min_distance,
                 status=GateStatus.CAUTION,
                 message=STOP_LOSS_TOO_CLOSE.format(
-                    stop_lose=proposal.stop_loss, price=proposal.last_price, min_distance_pct=min_distance_pct
+                    stop_loss=proposal.stop_loss,
+                    price=proposal.last_price,
+                    min_distance_pct=min_distance_pct,
                 ),
             ),
             GateRule(
