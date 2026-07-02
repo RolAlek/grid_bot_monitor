@@ -24,13 +24,7 @@ class CustomPionexAuth(Auth):
         method = request.method.upper().encode("utf-8")
         body = request.content or b""
 
-        path_bytes = request.url.raw_path
-        if b"?" in path_bytes:
-            path_bytes, query_bytes = path_bytes.split(b"?", 1)
-        else:
-            query_bytes = b""
-
-        prehash = method + path_bytes + query_bytes + body
+        prehash = method + request.url.raw_path + body
 
         return hmac.new(
             key=self._settings.api_secret.get_secret_value().encode("utf-8"),
