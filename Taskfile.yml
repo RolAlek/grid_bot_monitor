@@ -37,3 +37,8 @@ tasks:
     desc: "📦 Apply Migrations(Alembic)"
     cmds:
       - python -m source exec migrations
+
+  tests:
+    desc: "🧪 Run tests"
+    cmds:
+      - uv run pytest .
