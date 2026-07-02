@@ -9,8 +9,16 @@ from source.domain.entities import GateResult
 from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
 from source.infrastructure.database.models.base import Base
 from source.infrastructure.database.models.models import DecisionLog
-from source.infrastructure.database.repositories.decision_repository import SQLAlchemyDecisionLogRepository
+from source.infrastructure.database.repositories.alchemy.decision_repository import SQLAlchemyDecisionLogRepository
+from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
 from tests.fixtures.factories import FIXED_NOW, make_decision_verdict, make_gate_result
+
+
+def _symbol_filter(symbol: Symbol) -> BaseQueryFilter:
+    return BaseQueryFilter(
+        conditions=(BaseFieldCondition(field="symbol", operator=Operator.EQUALS, value=symbol.value),),
+        order_by=("-created_at",),
+    )
 
 
 @pytest.fixture
@@ -34,7 +42,7 @@ def repo(db_session: AsyncSession) -> SQLAlchemyDecisionLogRepository:
 async def test_get_last_decision_empty_returns_none(
     repo: SQLAlchemyDecisionLogRepository,
 ) -> None:
-    result = await repo.get_last_decision(Symbol.BTC)
+    result = await repo.get_one(_symbol_filter(Symbol.BTC))
     assert result is None
 
 
@@ -52,8 +60,8 @@ async def test_save_and_get_last_decision_round_trips(
         gates=(gate,),
         notes="weekly assessment",
     )
-    await repo.save_decision(verdict)
-    retrieved = await repo.get_last_decision(Symbol.BTC)
+    await repo.add(verdict)
+    retrieved = await repo.get_one(_symbol_filter(Symbol.BTC))
 
     assert retrieved is not None
     assert retrieved.action == VerdictAction.REVIEW
@@ -76,9 +84,9 @@ async def test_save_preserves_multiple_gates(
         make_gate_result(Gate.LIQUIDATION_SAFETY, GateStatus.PASS),
     )
     verdict = make_decision_verdict(action=VerdictAction.REVIEW, gates=gates)
-    await repo.save_decision(verdict)
+    await repo.add(verdict)
 
-    retrieved = await repo.get_last_decision(Symbol.BTC)
+    retrieved = await repo.get_one(_symbol_filter(Symbol.BTC))
     assert retrieved is not None
     assert len(retrieved.gates) == 3
     gate_types = {g.gate for g in retrieved.gates}
@@ -114,7 +122,7 @@ async def test_get_last_decision_returns_most_recent_by_created_at(
 
     await db_session.commit()
 
-    result = await repo.get_last_decision(Symbol.BTC)
+    result = await repo.get_one(_symbol_filter(Symbol.BTC))
     assert result is not None
     assert result.action == VerdictAction.LAUNCH
     assert result.notes == "newer"
@@ -124,7 +132,7 @@ async def test_get_last_decision_isolated_by_symbol(
     repo: SQLAlchemyDecisionLogRepository,
 ) -> None:
     verdict = make_decision_verdict(action=VerdictAction.HOLD)
-    await repo.save_decision(verdict)
+    await repo.add(verdict)
 
-    stmt_result = await repo.get_last_decision(Symbol.BTC)
+    stmt_result = await repo.get_one(_symbol_filter(Symbol.BTC))
     assert stmt_result is not None  # BTC finds it
