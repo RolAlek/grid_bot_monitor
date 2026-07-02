@@ -4,7 +4,8 @@ import pytest
 
 from source.application.services.gates.assess_positioning_second_gate import AssessPositioningService
 from source.application.services.run_daily_positioning_check import RunDailyPositioningCheck
-from source.domain.value_objects import Gate, GateResult, GateStatus, Symbol
+from source.domain.entities import GateResult
+from source.domain.value_objects import Gate, GateStatus, Symbol
 from source.settings import DecisionEngineSettings, PionexSettings, Settings
 
 
@@ -63,7 +64,7 @@ def daily_runner(
 
 
 async def test_daily_run_calls_gate2_only(daily_runner: RunDailyPositioningCheck, mock_gate2: AsyncMock) -> None:
-    await daily_runner.run()
+    await daily_runner.run(Symbol.BTC)
     mock_gate2.execute.assert_called_once_with(Symbol.BTC)
 
 
@@ -73,7 +74,7 @@ async def test_daily_sends_alert_on_first_run(
     mock_decision_service: AsyncMock,
 ) -> None:
     mock_decision_service.get_last_decision.return_value = None
-    await daily_runner.run()
+    await daily_runner.run(Symbol.BTC)
     mock_notifier.send_alert.assert_called_once()
 
 
@@ -89,10 +90,10 @@ async def test_daily_no_alert_when_status_unchanged(
     prev_verdict.gates = (pass_gate2,)
     mock_decision_service.get_last_decision.return_value = prev_verdict
 
-    await daily_runner.run()
+    await daily_runner.run(Symbol.BTC)
     mock_notifier.send_alert.assert_not_called()
 
 
 async def test_daily_persists_verdict(daily_runner: RunDailyPositioningCheck, mock_decision_service: AsyncMock) -> None:
-    await daily_runner.run()
+    await daily_runner.run(Symbol.BTC)
     mock_decision_service.persist_verdict.assert_called_once()

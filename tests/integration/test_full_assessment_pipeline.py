@@ -16,13 +16,15 @@ from source.domain.entities import (
     DecisionVerdict,
     FundingOiSnapshot,
     FundingRate,
+    GateResult,
     LiquidationEstimate,
     OpenInterest,
     ProposedGridParams,
 )
-from source.domain.value_objects import Gate, GateResult, GateStatus, Symbol, VerdictAction
+from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
 from source.settings import DecisionEngineSettings
 from tests.fixtures.factories import FIXED_NOW, make_proposed_grid_params
+from tests.fixtures.fakes import FakeDecisionLogRepository
 
 
 class FakeMarketData:
@@ -66,18 +68,6 @@ class FakeNotifier:
 
     async def send_digest(self, verdict: DecisionVerdict) -> None:
         self.sent_digests.append(verdict)
-
-
-class FakeDecisionLogRepository:
-    def __init__(self) -> None:
-        self._saved: list[DecisionVerdict] = []
-
-    async def save_decision(self, data: DecisionVerdict) -> None:
-        self._saved.append(data)
-
-    async def get_last_decision(self, symbol: Symbol) -> DecisionVerdict | None:
-        matching = [verdict for verdict in self._saved if verdict.symbol == symbol]
-        return matching[-1] if matching else None
 
 
 class FakeSnapshotRepository:

@@ -1,7 +1,8 @@
 import pytest
 
 from source.application.utils import evaluate_checks
-from source.domain.value_objects import GateRule, GateStatus
+from source.domain.entities import GateRule
+from source.domain.value_objects import GateStatus
 
 
 def _rule(triggered: bool, status: GateStatus, message: str = "") -> GateRule:
