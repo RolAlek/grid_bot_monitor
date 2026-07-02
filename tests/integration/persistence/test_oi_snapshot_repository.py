@@ -2,15 +2,15 @@ from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
 
 import pytest
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from source.domain.exceptions import DuplicateOISnapshotError
 from source.domain.value_objects import Symbol
 from source.infrastructure.database.models.base import Base
 from source.infrastructure.database.models.models import OISnapshot
 from source.infrastructure.database.repositories.alchemy.snapshot_repository import SQLAlchemySnapshotRepository
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
-from tests.fixtures.factories import FIXED_NOW, make_funding_oi_snapshot
+from tests.fixtures.factories import make_funding_oi_snapshot
 
 
 # Naive datetime matching FIXED_NOW's date — SQLite stores datetimes without timezone info.
@@ -47,7 +47,7 @@ def filters() -> BaseQueryFilter:
             BaseFieldCondition(
                 field="created_at",
                 operator=Operator.GREATER_OR_EQUALS,
-                value=FIXED_NOW,
+                value=_NAIVE_NOW - timedelta(days=7),
             ),
         )
     )
@@ -124,8 +124,7 @@ async def test_duplicate_snapshot_same_symbol_date_raises_integrity_error(
     await repo.add(make_funding_oi_snapshot())
     await db_session.commit()
 
-    # save_snapshot flushes internally, so the unique constraint fires inside the method.
-    with pytest.raises(IntegrityError):
+    with pytest.raises(DuplicateOISnapshotError):
         await repo.add(make_funding_oi_snapshot())
 
 

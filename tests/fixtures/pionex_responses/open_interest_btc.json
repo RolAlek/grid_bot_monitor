@@ -4,7 +4,7 @@
   "data": {
     "openInterests": [
       {
-        "symbol": "USDT_BTC_REPR",
+        "symbol": "BTC_USDT_PERP",
         "openInterest": 5000000.0
       }
     ]

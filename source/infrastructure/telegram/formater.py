@@ -43,10 +43,12 @@ class TelegramMessageFormatter:
         funding = result.raw_values["funding_rate_annualized_pct"]
         oi_change = result.raw_values["oi_pct_change_7d"]
 
+        oi_text = f"{oi_change:.1f}%" if oi_change is not None else "insufficient history"
+
         return (
             f"{self._STATUS_EMOJI.get(result.status, '⚪')} Gate status change — Positioning (Gate 2)\n\n"
             f"Funding: {funding:.1f}% annualized ({'long' if funding > 0 else 'short'})\n"
-            f"Open Interest: {oi_change:.1f}% (7d change: {oi_change:.1f}%)\n"
+            f"Open Interest: {oi_text}\n"
             f"Previous: {prev_status.name if prev_status else 'NONE'} → Now: {result.status.name}\n\n"
             f"No action taken — informational only."
         )
