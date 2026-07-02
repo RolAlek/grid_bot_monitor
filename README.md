@@ -32,15 +32,16 @@ Checks that funding rates and open interest do not signal a crowded or high-risk
 > Open interest is sampled daily and stored locally — Pionex provides only the current value, so history must be built up over time.
 
 ### Gate 3 — Liquidation Safety
-Validates that the proposed grid parameters leave enough distance to the liquidation price.
+Validates that the proposed grid parameters leave enough distance to the liquidation price. Calls Pionex's `checkParams` endpoint — no position is opened.
 
 | Check | Result |
 |---|---|
 | Leverage > 5× | FAIL |
 | Liquidation buffer < 2.5× grid range width (up or down) | FAIL |
+| Stop-loss at or beyond liquidation price (LONG: SL ≤ liq; SHORT: SL ≥ liq) | FAIL |
+| Stop-loss too close to price (< 1% for crypto, < 0.5% for XAUT) | CAUTION |
+| Take-profit inside the grid range (LONG: TP < top; SHORT: TP > bottom) | CAUTION |
 | Otherwise | PASS |
-
-This gate calls Pionex's `checkParams` endpoint with the proposed parameters to get the exact liquidation price estimate — no position is opened.
 
 ### Verdict
 
@@ -57,9 +58,14 @@ This gate calls Pionex's `checkParams` endpoint with the proposed parameters to 
 | Command | Description |
 |---|---|
 | `/start` | Introduction and overview |
-| `/assess` | Run a full three-gate assessment immediately |
-| `/verdict` | Show the most recent stored verdict |
+| `/weekly_assessment` | Run a full three-gate assessment immediately |
+| `/daily_assessment` | Run Gate 2 (positioning) check only |
+| `/verdict` | Show the most recent stored verdict with gate details |
 | `/help` | List available commands |
+
+When a verdict suggests `LAUNCH`, an inline keyboard appears with:
+- 🪄 **Launch** — places the grid via Pionex API
+- 🦽 **Manual** — registers the grid as manually launched (no API call)
 
 ---
 
@@ -82,15 +88,24 @@ Clean Architecture — domain → application → infrastructure → presentatio
 source/
 ├── domain/              # entities, value objects, exceptions
 ├── application/
-│   ├── services/        # gate services, indicator computation, grid builder
-│   └── use_cases/       # weekly assessment, daily positioning check
+│   ├── ports.py         # abstract interfaces (Notifier, MarketDataPort, GridPort)
+│   ├── exceptions.py    # application-layer errors
+│   ├── utils.py         # evaluate_checks — aggregates gate rules into verdict
+│   ├── services/        # gate orchestrators, indicator computation, grid builder, OI snapshots
+│   │   └── gates/       # assess_market_regime, assess_positioning, assess_liquidation_safety
+│   └── use_cases/       # pure rule functions: check_regime_rules, check_positioning_rules, liquidation_safety_checks
 ├── infrastructure/
-│   ├── http/pionex/     # Pionex API client, staleness guard adapter
-│   ├── database/        # SQLAlchemy models, alembic migrations, repositories
-│   └── telegram/        # aiogram notifier
+│   ├── http/pionex/     # Pionex API client, request/response models, staleness guard adapter
+│   ├── database/        # SQLAlchemy models, alembic migrations, repositories (alchemy impl)
+│   │   └── repositories/
+│   │       ├── base.py          # AbstractRepository[ET] — generic CRUD contract
+│   │       ├── filters.py       # BaseQueryFilter, BaseFieldCondition
+│   │       └── alchemy/         # SQLAlchemyBaseRepository + concrete repos
+│   └── telegram/        # aiogram notifier, message formatter
 └── presentation/
-    ├── bot/handlers/    # /assess, /verdict, /start, /help
-    └── scheduler/       # APScheduler job registration
+    ├── bot/handlers/    # /weekly_assessment, /daily_assessment, /verdict, /start, /help, grid launch callbacks
+    │   └── keyboards/   # inline keyboard builder for verdict reactions
+    └── scheduler/       # APScheduler cron jobs (daily positioning, weekly assessment)
 ```
 
 ---
@@ -147,6 +162,61 @@ The `migrate` service runs `alembic upgrade head` before the bot starts. If migr
 
 ---
 
+## Testing
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run only unit tests (fast, no I/O)
+uv run pytest tests/unit/
+
+# Run integration tests (marked with DB/HTTP access)
+uv run pytest tests/integration/
+
+# Run with coverage
+uv run pytest --cov --cov-report=term-missing
+
+# Type checking
+uv run mypy
+
+# Lint + auto-fix
+uv run ruff check . --fix
+```
+
+### Test structure
+
+```
+tests/
+├── conftest.py              # shared fixtures (clock, settings, base entities)
+├── fixtures/
+│   ├── factories.py         # make_* factories for test data
+│   ├── fakes.py             # shared fake repositories (in-memory, AbstractRepository)
+│   └── pionex_responses/    # real API response fixtures (JSON)
+├── unit/
+│   ├── domain/              # entity validation, evaluate_checks, gate rules
+│   ├── application/
+│   │   ├── services/        # DecisionLogService, OISnapshotService, GridProposalBuilder, IndicatorService, GridBotService
+│   │   ├── use_cases/
+│   │   │   └── gates/       # market regime, positioning, liquidation safety rules (+ property-based)
+│   │   └── formatters/      # alert & digest message formatting
+│   └── presentation/
+│       └── bot/             # decision & launch handlers
+└── integration/
+    ├── pionex/              # HTTP client + staleness guard adapter
+    ├── persistence/         # SQLAlchemy repositories (SQLite in-memory)
+    └── test_full_assessment_pipeline.py  # end-to-end three-gate run
+```
+
+### Testing philosophy
+
+- **Unit tests** follow the classical (Detroit) school: use real objects where possible, mock only external I/O (HTTP, DB). Hand-rolled fakes (`tests/fixtures/fakes.py`) replace real repositories — faster and more predictable than SQLite.
+- **Property-based tests** (`test_property_based.py`) use Hypothesis to verify gate rules never crash on any valid input.
+- **Gate rule tests** are parametrized to cover boundary values (ADX thresholds, funding rate thresholds) without duplicating test code.
+- **Integration tests** use `respx` for HTTP mocking and SQLite `:memory:` for repository tests. Marked separately from unit tests.
+
+---
+
 ## Local development
 
 ```bash
@@ -168,8 +238,8 @@ uv run pytest --cov --cov-report=term-missing
 # Type checking
 uv run mypy
 
-# Linting
-uv run ruff check .
+# Lint + auto-fix
+uv run ruff check . --fix
 ```
 
 ---
@@ -180,3 +250,4 @@ uv run ruff check .
 |---|---|
 | `oi_snapshots` | Daily OI samples — used to compute the 7-day change for Gate 2 |
 | `decision_logs` | Full verdict history with gate results and raw values — audit trail |
+| `grid_launches` | Launched grids (auto via API or manual) — linked to decision verdicts |
