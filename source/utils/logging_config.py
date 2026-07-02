@@ -120,6 +120,7 @@ def configure_logging(settings: "AppSettings") -> None:
             "httpx": {"level": "WARNING", "propagate": True},
             "httpcore": {"level": "WARNING", "propagate": True},
             "hpack": {"level": "WARNING", "propagate": True},
+            "aiosqlite": {"level": "INFO", "propagate": True},
             "sqlalchemy.engine": {"level": "WARNING", "propagate": True},
             "sqlalchemy.pool": {"level": "WARNING", "propagate": True},
             "apscheduler": {"level": "INFO", "propagate": True},

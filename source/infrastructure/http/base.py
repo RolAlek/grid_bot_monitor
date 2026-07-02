@@ -104,10 +104,11 @@ class BaseHTTPClient:
             )
 
         async with AsyncClient(base_url=self._base_url, timeout=self._timeout, auth=self._auth) as client:
+            request_url = str(client.build_request(method=method, url=path, params=params).url)
             logger.info(
                 "HTTP request",
                 method=method,
-                url=f"{self._base_url}{path}",
+                url=request_url,
                 params=params,
                 body=serialized_payload,
             )
@@ -123,7 +124,7 @@ class BaseHTTPClient:
         logger.info(
             "HTTP response",
             method=method,
-            url=f"{self._base_url}{path}",
+            url=request_url,
             status_code=response.status_code,
             body=response_body.decode(errors="replace"),
         )
