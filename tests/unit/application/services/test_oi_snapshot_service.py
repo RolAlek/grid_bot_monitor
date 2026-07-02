@@ -23,7 +23,7 @@ def _make_oi_service() -> tuple[OISnapshotService, FakeSnapshotRepository]:
 async def test_oi_pct_change_none_when_fewer_than_min_snapshots() -> None:
     service, repo = _make_oi_service()
     snap = make_funding_oi_snapshot(created_at=FIXED_NOW, open_interest=5_000_000.0)
-    repo._snapshots.append(snap)  # noqa: SLF001
+    await repo.add(snap)
 
     result = await service.create_snapshot(Symbol.BTC)
     assert result is not None
@@ -34,7 +34,8 @@ async def test_oi_pct_change_computed_when_enough_snapshots() -> None:
     service, repo = _make_oi_service()
     oldest = make_funding_oi_snapshot(created_at=FIXED_NOW - timedelta(days=6), open_interest=4_000_000.0)
     mid = make_funding_oi_snapshot(created_at=FIXED_NOW - timedelta(days=3), open_interest=4_500_000.0)
-    repo._snapshots.extend([oldest, mid])  # noqa: SLF001
+    await repo.add(oldest)
+    await repo.add(mid)
 
     newest_oi = 5_000_000.0
     result = await service.create_snapshot(Symbol.BTC)
@@ -49,5 +50,6 @@ async def test_persist_oi_snapshot_saves_to_repo() -> None:
     service, repo = _make_oi_service()
     snap = make_funding_oi_snapshot()
     await service.persist_oi_snapshot(snap)
-    assert len(repo._snapshots) == 1  # noqa: SLF001
-    assert repo._snapshots[0].open_interest == snap.open_interest  # noqa: SLF001
+    all_snapshots = await repo.get_list()
+    assert len(all_snapshots) == 1
+    assert all_snapshots[0].open_interest == snap.open_interest

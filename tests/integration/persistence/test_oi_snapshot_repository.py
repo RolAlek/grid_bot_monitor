@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from source.domain.value_objects import Symbol
 from source.infrastructure.database.models.base import Base
 from source.infrastructure.database.models.models import OISnapshot
-from source.infrastructure.database.repositories.filters.base import BaseFieldCondition, BaseQueryFilter, Operator
-from source.infrastructure.database.repositories.oi_repository import SQLAlchemySnapshotRepository
+from source.infrastructure.database.repositories.alchemy.snapshot_repository import SQLAlchemySnapshotRepository
+from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
 from tests.fixtures.factories import FIXED_NOW, make_funding_oi_snapshot
 
 
@@ -114,7 +114,7 @@ async def test_get_oi_snapshots_last_7d_returns_rows_ascending(
 
     result = await repo.get_list(filters)
     assert len(result) == 3
-    assert result[0].as_of < result[1].as_of < result[2].as_of
+    assert result[0].created_at < result[1].created_at < result[2].created_at
 
 
 async def test_duplicate_snapshot_same_symbol_date_raises_integrity_error(
