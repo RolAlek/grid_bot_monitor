@@ -65,3 +65,41 @@ def test_grid_levels_clamped_to_bound(
     proposal = builder.build(Symbol.BTC, ind)
     expected = settings.max_grid_rows if expected_bound == "max" else settings.min_grid_rows
     assert proposal.grid_levels == expected
+
+
+def test_neutral_grid_has_no_stop_loss_or_take_profit(builder: GridProposalBuilder) -> None:
+    indicators = make_indicator_set(
+        last_price=96_000.0,
+        sma50=95_000.0,
+        macd=100.0,
+        macd_signal=150.0,
+    )
+    proposal = builder.build(Symbol.BTC, indicators)
+    assert proposal.trend == Trend.NEUTRAL
+    assert proposal.stop_loss is None
+    assert proposal.take_profit is None
+
+
+def test_long_grid_has_stop_loss_below_price(builder: GridProposalBuilder) -> None:
+    indicators = make_indicator_set()
+    proposal = builder.build(Symbol.BTC, indicators)
+    assert proposal.trend == Trend.LONG
+    assert proposal.stop_loss is not None
+    assert proposal.take_profit is not None
+    assert proposal.stop_loss < indicators.last_price
+    assert proposal.take_profit > indicators.swing_high_14d
+
+
+def test_short_grid_has_stop_loss_above_price(builder: GridProposalBuilder) -> None:
+    indicators = make_indicator_set(
+        last_price=94_000.0,
+        sma50=95_000.0,
+        macd=100.0,
+        macd_signal=150.0,
+    )
+    proposal = builder.build(Symbol.BTC, indicators)
+    assert proposal.trend == Trend.SHORT
+    assert proposal.stop_loss is not None
+    assert proposal.take_profit is not None
+    assert proposal.stop_loss > indicators.last_price
+    assert proposal.take_profit < indicators.swing_low_14d
