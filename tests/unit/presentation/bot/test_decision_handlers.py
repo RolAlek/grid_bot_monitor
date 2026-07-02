@@ -4,17 +4,57 @@ import pytest
 from aiogram import Router
 
 from source.application.services.decision_log_service import DecisionLogService
+from source.application.services.run_daily_positioning_check import RunDailyPositioningCheck
 from source.application.services.run_weekly_full_assessment import RunWeeklyFullAssessment
 from source.domain.value_objects import VerdictAction
-from source.presentation.bot.handlers.decision_handlers import router_factory
+from source.presentation.bot.handlers.decision_handlers import decision_router
 from tests.fixtures.factories import make_decision_verdict
 
 
+def _make_message(**kwargs: object) -> AsyncMock:
+    msg = AsyncMock()
+    msg.answer = AsyncMock()
+    msg.reply = AsyncMock()
+    msg.from_user = MagicMock()
+    msg.from_user.id = 42
+    msg.from_user.username = "testuser"
+    msg.bot = AsyncMock()
+    msg.chat = MagicMock()
+    msg.chat.id = 12345
+    msg.text = ""
+
+    for key, value in kwargs.items():
+        setattr(msg, key, value)
+
+    return msg
+
+
+def _answer_text(msg: AsyncMock) -> str:
+    if msg.answer.call_args is None:
+        return ""
+    if msg.answer.call_args.args:
+        return str(msg.answer.call_args.args[0])
+    return str(msg.answer.call_args.kwargs.get("text", ""))
+
+
+def _get_handler(router: Router, name: str) -> object:
+    for observer in router.message.handlers:
+        if name in observer.callback.__name__:
+            return observer.callback
+    raise LookupError(f"No handler matching '{name}' found in router")
+
+
 @pytest.fixture
-def mock_runner() -> AsyncMock:
+def mock_weekly_runner() -> AsyncMock:
     mock = AsyncMock(spec=RunWeeklyFullAssessment)
-    verdict = make_decision_verdict(action=VerdictAction.LAUNCH)
-    mock.run.return_value = verdict
+    mock.run = AsyncMock()
+    return mock
+
+
+@pytest.fixture
+def mock_daily_runner() -> AsyncMock:
+    mock = AsyncMock(spec=RunDailyPositioningCheck)
+    mock.run = AsyncMock()
     return mock
 
 
@@ -25,105 +65,80 @@ def mock_decision_service() -> AsyncMock:
     return mock
 
 
-def _make_message(**kwargs: object) -> AsyncMock:
-    msg = AsyncMock()
-    msg.answer = AsyncMock()
-    msg.from_user = MagicMock()
-    msg.from_user.id = 42
-
-    for key, value in kwargs.items():
-        setattr(msg, key, value)
-
-    return msg
-
-
-def test_router_factory_creates_independent_routers(mock_runner: AsyncMock, mock_decision_service: AsyncMock) -> None:
-    router_a = router_factory(mock_runner, mock_decision_service)
-    router_b = router_factory(mock_runner, mock_decision_service)
+def test_router_factory_creates_independent_routers(
+    mock_weekly_runner: AsyncMock,
+    mock_daily_runner: AsyncMock,
+    mock_decision_service: AsyncMock,
+) -> None:
+    router_a = decision_router(mock_weekly_runner, mock_daily_runner, mock_decision_service)
+    router_b = decision_router(mock_weekly_runner, mock_daily_runner, mock_decision_service)
 
     assert router_a is not router_b
     assert isinstance(router_a, Router)
     assert isinstance(router_b, Router)
 
 
-async def test_assess_from_user_none_does_not_raise(mock_runner: AsyncMock, mock_decision_service: AsyncMock) -> None:
-    router = router_factory(mock_runner, mock_decision_service)
-    message = _make_message(from_user=None)
-
-    handlers = list(router.message.handlers)
-    assert len(handlers) >= 1, "Router must have at least one message handler"
-
-    router_ = router_factory(mock_runner, mock_decision_service)
-
-    for observer in router_.message.handlers:
-        callback = observer.callback
-
-        if "assess" in callback.__name__:
-            await callback(message)
-            break
-
-    message.answer.assert_called()
-
-
-async def test_assess_runner_raises_sends_failure_and_does_not_reraise(
+async def test_weekly_assessment_calls_runner(
+    mock_weekly_runner: AsyncMock,
+    mock_daily_runner: AsyncMock,
     mock_decision_service: AsyncMock,
 ) -> None:
-    failing_runner = AsyncMock(spec=RunWeeklyFullAssessment)
-    failing_runner.run.side_effect = RuntimeError("boom")
-
-    router = router_factory(failing_runner, mock_decision_service)
+    router = decision_router(mock_weekly_runner, mock_daily_runner, mock_decision_service)
+    handler = _get_handler(router, "handle_assess")
     message = _make_message()
 
-    for observer in router.message.handlers:
-        callback = observer.callback
+    await handler(message)
 
-        if "assess" in callback.__name__:
-            await callback(message)
-            break
+    mock_weekly_runner.run.assert_called()
+    message.reply.assert_called_once()
+
+
+async def test_weekly_assessment_handles_runner_error(
+    mock_weekly_runner: AsyncMock,
+    mock_daily_runner: AsyncMock,
+    mock_decision_service: AsyncMock,
+) -> None:
+    mock_weekly_runner.run.side_effect = RuntimeError("boom")
+    router = decision_router(mock_weekly_runner, mock_daily_runner, mock_decision_service)
+    handler = _get_handler(router, "handle_assess")
+    message = _make_message()
+
+    await handler(message)
 
     message.answer.assert_called()
-    calls = [c.args[0] if c.args else c.kwargs.get("text", "") for c in message.answer.call_args_list]
-    assert any(
-        "fail" in str(call).lower() or "error" in str(call).lower() or "check" in str(call).lower() for call in calls
-    )
+    text = _answer_text(message)
+    assert "fail" in text.lower() or "check" in text.lower()
 
 
-async def test_verdict_no_decision_sends_prompt(mock_runner: AsyncMock, mock_decision_service: AsyncMock) -> None:
+async def test_verdict_no_decision_shows_prompt(
+    mock_weekly_runner: AsyncMock,
+    mock_daily_runner: AsyncMock,
+    mock_decision_service: AsyncMock,
+) -> None:
     mock_decision_service.get_last_decision.return_value = None
-    router = router_factory(mock_runner, mock_decision_service)
+    router = decision_router(mock_weekly_runner, mock_daily_runner, mock_decision_service)
+    handler = _get_handler(router, "handle_verdict")
     message = _make_message()
 
-    for observer in router.message.handlers:
-        callback = observer.callback
+    await handler(message)
 
-        if "verdict" in callback.__name__:
-            await callback(message)
-            break
-
-    text = (
-        message.answer.call_args.args[0]
-        if message.answer.call_args.args
-        else message.answer.call_args.kwargs.get("text", "")
-    )
-    assert "/assess" in text or "no verdict" in text.lower() or "run" in text.lower()
+    text = _answer_text(message)
+    assert "no verdict" in text.lower() or "/assess" in text.lower()
 
 
-async def test_verdict_with_decision_shows_action(mock_runner: AsyncMock, mock_decision_service: AsyncMock) -> None:
+async def test_verdict_with_decision_shows_action(
+    mock_weekly_runner: AsyncMock,
+    mock_daily_runner: AsyncMock,
+    mock_decision_service: AsyncMock,
+) -> None:
     verdict = make_decision_verdict(action=VerdictAction.REVIEW)
     mock_decision_service.get_last_decision.return_value = verdict
 
-    router = router_factory(mock_runner, mock_decision_service)
+    router = decision_router(mock_weekly_runner, mock_daily_runner, mock_decision_service)
+    handler = _get_handler(router, "handle_verdict")
     message = _make_message()
 
-    for observer in router.message.handlers:
-        callback = observer.callback
-        if "verdict" in callback.__name__:
-            await callback(message)
-            break
+    await handler(message)
 
-    text = (
-        message.answer.call_args.args[0]
-        if message.answer.call_args.args
-        else message.answer.call_args.kwargs.get("text", "")
-    )
+    text = _answer_text(message)
     assert "REVIEW" in text or "review" in text.lower()

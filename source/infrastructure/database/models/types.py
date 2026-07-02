@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Annotated, Any, cast
 
@@ -7,7 +8,15 @@ from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import mapped_column
 
 
-_symbol = Annotated[str, mapped_column(String(16))]
+SymbolType = Annotated[str, mapped_column(String(16), index=True)]
+CreatedAt = Annotated[
+    datetime,
+    mapped_column(default=lambda: datetime.now(UTC)),
+]
+UpdatedAt = Annotated[
+    datetime,
+    mapped_column(default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)),
+]
 
 
 class _EnumEncoder(json.JSONEncoder):

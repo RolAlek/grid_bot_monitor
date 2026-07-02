@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -10,35 +9,6 @@ from source.application.services.run_weekly_full_assessment import RunWeeklyFull
 from source.domain.entities import GateResult, ProposedGridParams
 from source.domain.value_objects import Gate, GateStatus, GridType, Symbol, Trend
 from source.settings import DecisionEngineSettings, PionexSettings, Settings
-
-
-NOW = datetime(2026, 6, 19, tzinfo=UTC)
-
-_PROPOSAL = ProposedGridParams(
-    symbol=Symbol.BTC,
-    top=100_000.0,
-    bottom=88_000.0,
-    grid_levels=50,
-    leverage=1,
-    quote_investment=1_000.0,
-    trend=Trend.NEUTRAL,
-    grid_type=GridType.GEOMETRIC,
-)
-
-
-def _gate_result(gate: Gate, status: GateStatus) -> GateResult:
-    return GateResult(gate=gate, status=status, reasons=(), raw_values={})
-
-
-def _runner() -> RunWeeklyFullAssessment:
-    return RunWeeklyFullAssessment(
-        decision_service=MagicMock(),
-        gate1=MagicMock(),
-        gate2=MagicMock(),
-        gate3=MagicMock(),
-        notifier=MagicMock(),
-        settings=MagicMock(spec=Settings),
-    )
 
 
 @pytest.fixture
@@ -61,6 +31,7 @@ def proposal() -> ProposedGridParams:
         quote_investment=1_000.0,
         trend=Trend.NEUTRAL,
         grid_type=GridType.GEOMETRIC,
+        last_price=95_000.0,
     )
 
 
@@ -144,7 +115,7 @@ async def test_weekly_run_calls_all_three_gates(
     mock_gate2: AsyncMock,
     mock_gate3: AsyncMock,
 ) -> None:
-    await weekly_runner.run()
+    await weekly_runner.run(Symbol.BTC)
     mock_gate1.execute.assert_called_once_with(Symbol.BTC)
     mock_gate2.execute.assert_called_once_with(Symbol.BTC)
     mock_gate3.execute.assert_called_once()
@@ -154,7 +125,7 @@ async def test_weekly_always_sends_digest(
     weekly_runner: RunWeeklyFullAssessment,
     mock_notifier: AsyncMock,
 ) -> None:
-    await weekly_runner.run()
+    await weekly_runner.run(Symbol.BTC)
     mock_notifier.send_digest.assert_called_once()
 
 
@@ -162,7 +133,7 @@ async def test_weekly_persists_verdict_exactly_once(
     weekly_runner: RunWeeklyFullAssessment,
     mock_decision_service: AsyncMock,
 ) -> None:
-    await weekly_runner.run()
+    await weekly_runner.run(Symbol.BTC)
     mock_decision_service.persist_verdict.assert_called_once()
 
 
@@ -191,7 +162,7 @@ async def test_weekly_skips_gate2_and_gate3_when_gate1_fails(
         notifier=mock_notifier,
         settings=mock_settings,
     )
-    await runner.run()
+    await runner.run(Symbol.BTC)
     mock_gate2.execute.assert_not_called()
     mock_gate3.execute.assert_not_called()
 
@@ -222,5 +193,5 @@ async def test_weekly_digest_still_sent_on_hold(
         notifier=mock_notifier,
         settings=mock_settings,
     )
-    await runner.run()
+    await runner.run(Symbol.BTC)
     mock_notifier.send_digest.assert_called_once()

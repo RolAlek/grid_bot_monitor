@@ -1,11 +1,11 @@
 from hypothesis import given, settings as hyp_settings, strategies as st
 
-from source.application.use_cases.check_positioning_rueles import build_positioning_checks
+from source.application.use_cases.check_positioning_rules import build_positioning_checks
 from source.application.use_cases.check_regime_rules import build_market_regime_checks
 from source.application.use_cases.liquidation_safety_checks import build_liquidation_safety_checks
 from source.application.utils import evaluate_checks
-from source.domain.entities import LiquidationEstimate
-from source.domain.value_objects import GateRule, GateStatus, Trend
+from source.domain.entities import GateRule, LiquidationEstimate
+from source.domain.value_objects import GateStatus, Trend
 from source.settings import DecisionEngineSettings
 from tests.fixtures.factories import (
     make_funding_oi_snapshot,
@@ -94,7 +94,11 @@ def test_gate3_never_raises_for_valid_inputs(
     leverage: int,
     trend: Trend,
 ) -> None:
-    proposal = make_proposed_grid_params(leverage=leverage, trend=trend)
+    overrides: dict[str, object] = {"leverage": leverage, "trend": trend}
+    if trend in {Trend.LONG, Trend.SHORT}:
+        overrides["stop_loss"] = 80_000.0
+        overrides["take_profit"] = 110_000.0
+    proposal = make_proposed_grid_params(**overrides)
     if buf_up is not None or buf_down is not None:
         estimate = make_liquidation_estimate_with_buffers(buf_up, buf_down)
     else:

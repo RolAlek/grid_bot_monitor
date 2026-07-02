@@ -7,8 +7,6 @@ from typing import Any
 from pydantic import HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from source.domain.value_objects import GridType, Symbol
-
 
 class LogLevel(StrEnum):
     DEBUG = "DEBUG"
@@ -46,8 +44,6 @@ class PionexSettings(_BaseSettings):
     api_key: SecretStr
     api_secret: SecretStr
     timeout: float = 10
-
-    symbol: Symbol = Symbol.BTC
     kline_interval: str = "4H"
     limit: int = 500
 
@@ -77,9 +73,10 @@ class DecisionEngineSettings(_BaseSettings):
     # Default grid parameters used when auto-drawing a proposal from swing range
     default_leverage: int = 1
     default_quote_investment: float = 1_000.0
-    default_grid_type: GridType = GridType.GEOMETRIC
     min_grid_rows: int = 5
     max_grid_rows: int = 120
+
+    take_profit_buffer_atr: float = 3.0
 
 
 class DatabaseSettings(_BaseSettings):

@@ -1,6 +1,6 @@
 import structlog
 
-from source.application.ports import GridValidationPort
+from source.application.ports import GridPort
 from source.application.use_cases.liquidation_safety_checks import build_liquidation_safety_checks
 from source.application.utils import evaluate_checks
 from source.domain.entities import GateResult, ProposedGridParams
@@ -15,7 +15,7 @@ class AssessLiquidationSafetyService:
     def __init__(
         self,
         settings: DecisionEngineSettings,
-        grid_validation: GridValidationPort,
+        grid_validation: GridPort,
     ) -> None:
         self._settings = settings
         self._grid_validation = grid_validation

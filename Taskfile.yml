@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+tasks:
+  clean:
+    desc: "🧹 Clean python caches"
+    cmds:
+      - uvx pyclean .
+
+  lint-fix:
+    desc: "🧹 Lint and fix python code"
+    cmds:
+      - uvx ruff check . --fix
+      - uvx ruff format .
+
+  mypy-check:
+    desc: "🧹 Run mypy static check"
+    cmds:
+      - uv run mypy .
+
+  install-deps:
+    desc: "📦 Install dependencies"
+    cmds:
+      - uv sync
+
+  install-pre-commit:
+    desc: "📦 Install pre-commit hooks"
+    cmds:
+      - uv run pre-commit install
+
+  setup:
+    desc: "⚙️ Setup Environment"
+    deps: [install-deps, install-pre-commit]
+
+  migrate:
+    desc: "📦 Apply Migrations(Alembic)"
+    cmds:
+      - python -m source exec migrations
+
+  tests:
+    desc: "🧪 Run tests"
+    cmds:
+      - uv run pytest .

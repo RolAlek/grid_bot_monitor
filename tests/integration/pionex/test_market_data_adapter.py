@@ -45,6 +45,9 @@ def proposal() -> ProposedGridParams:
         quote_investment=1_000.0,
         trend=Trend.LONG,
         grid_type=GridType.GEOMETRIC,
+        last_price=95_000.0,
+        stop_loss=80_000.0,
+        take_profit=110_000.0,
     )
 
 

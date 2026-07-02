@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Отладчик Python: Telegram bot",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/source/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "envFile": "${workspaceFolder}/.vscode/.env"
+        }
+    ]
+}

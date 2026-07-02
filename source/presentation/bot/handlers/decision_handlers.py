@@ -8,16 +8,16 @@ from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.run_daily_positioning_check import RunDailyPositioningCheck
 from source.application.services.run_weekly_full_assessment import RunWeeklyFullAssessment
 from source.domain.value_objects import Symbol
+from source.utils.ensure import ensure
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
-def router_factory(
+def decision_router(  # noqa: C901
     weekly_runner: RunWeeklyFullAssessment,
     daily_runner: RunDailyPositioningCheck,
     decision_service: DecisionLogService,
-    symbol: Symbol = Symbol.BTC,
 ) -> Router:
     router = Router(name="decision")
 
@@ -26,11 +26,14 @@ def router_factory(
         logger.info(
             "Manual /weekly_assessment requested",
             user_id=message.from_user.id if message.from_user else "unknown",
+            user_name=message.from_user.username if message.from_user else "unknown",
         )
-        await message.answer("Running full assessment — this may take a few seconds...")
+        await message.reply("Running full assessment — this may take a few seconds...")
+
         try:
             async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
-                await weekly_runner.run()
+                for symbol in Symbol:
+                    await weekly_runner.run(symbol)
         except Exception:
             logger.exception("Full assessment was failed")
             await message.answer("Assessment failed — check logs for details.")
@@ -44,7 +47,8 @@ def router_factory(
         await message.answer("Running daily assessment — this may take a few seconds...")
         try:
             async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
-                await daily_runner.run()
+                for symbol in Symbol:
+                    await daily_runner.run(symbol)
         except Exception:
             logger.exception("Daily assessment was failed")
             await message.answer("Daily assessment failed — check logs")
@@ -52,22 +56,25 @@ def router_factory(
     @router.message(Command("verdict"))
     async def handle_verdict(message: Message) -> None:
         async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
-            verdict = await decision_service.get_last_decision(symbol)
+            verdict = await decision_service.get_last_decision(Symbol.BTC)
             if verdict is None:
                 await message.answer("No verdict on record yet. Run /assess first.")
                 return
 
             lines = [
-                f"Last verdict: {verdict.action.value.upper()} ({verdict.as_of.strftime('%Y-%m-%d %H:%M UTC')})",
+                (
+                    f"Last verdict: {verdict.action.value.upper()} "
+                    f"({ensure(verdict.created_at).strftime('%Y-%m-%d %H:%M UTC')})"
+                ),
             ]
             for gate in verdict.gates:
                 reason = gate.reasons[0] if gate.reasons else "ok"
                 lines.append(f"  {gate.gate.name}: {gate.status.name} — {reason}")
 
-            if verdict.suggested_grid_top is not None:
+            if verdict.suggested_parameters and verdict.suggested_parameters.top is not None:
                 lines.append(
-                    f"Range: {verdict.suggested_grid_bottom:,.0f} - {verdict.suggested_grid_top:,.0f}"
-                    f"  |  Leverage: {verdict.suggested_leverage}x"
+                    f"Range: {verdict.suggested_parameters.bottom:,.0f} - {verdict.suggested_parameters.top:,.0f}"
+                    f"  |  Leverage: {verdict.suggested_parameters.leverage}x"
                 )
 
             await message.answer("\n".join(lines))

@@ -7,7 +7,8 @@ _HELP_TEXT = (
     "<b>Grid Bot Advisor and Monitor</b>\n"
     "\n"
     "Available commands:\n"
-    "/assess — run a full three-gate assessment and receive a verdict\n"
+    "/weekly_assessment — run a full three-gate assessment and receive a verdict\n"
+    "/daily_assessment - run a full two-gate assessment and receive a alert or  silence"
     "/verdict — show the most recent stored verdict\n"
     "/help — show this message"
 )

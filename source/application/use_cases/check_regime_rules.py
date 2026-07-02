@@ -1,5 +1,5 @@
-from source.domain.entities import IndicatorSet, ProposedGridParams
-from source.domain.value_objects import GateRule, GateStatus
+from source.domain.entities import GateRule, IndicatorSet, ProposedGridParams
+from source.domain.value_objects import GateStatus
 from source.settings import DecisionEngineSettings
 
 

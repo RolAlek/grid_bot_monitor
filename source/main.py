@@ -5,12 +5,19 @@ from aiogram import Dispatcher
 from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from source.dependencies import get_daily_runner, get_decision_service, get_telegram_bot, get_weekly_runner
-from source.observability.logging_config import configure_logging
+from source.dependencies import (
+    get_daily_runner,
+    get_decision_service,
+    get_launch_service,
+    get_telegram_bot,
+    get_weekly_runner,
+)
 from source.presentation.bot.handlers.common_handlers import common_router
-from source.presentation.bot.handlers.decision_handlers import router_factory
+from source.presentation.bot.handlers.decision_handlers import decision_router
+from source.presentation.bot.handlers.launch_grid_handlers import grid_router
 from source.presentation.scheduler.jobs import register_jobs
 from source.settings import get_settings
+from source.utils.logging_config import configure_logging
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -24,13 +31,13 @@ async def main() -> None:
     dp = Dispatcher()
     dp.include_router(common_router())
     dp.include_router(
-        router_factory(
+        decision_router(
             weekly_runner=get_weekly_runner(),
             daily_runner=get_daily_runner(),
             decision_service=get_decision_service(),
-            symbol=settings.pionex.symbol,
         )
     )
+    dp.include_router(grid_router(grid_launch_service=get_launch_service()))
 
     scheduler = AsyncIOScheduler()
     register_jobs(scheduler, daily_runner=get_daily_runner(), weekly_runner=get_weekly_runner())

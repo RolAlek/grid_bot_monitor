@@ -3,15 +3,8 @@ from datetime import datetime
 from typing import Any
 
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
-from source.domain.value_objects import Gate, GateStatus, GridType, Symbol, Trend, VerdictAction
-
-
-@dataclass(frozen=True)
-class GateResult:
-    gate: Gate
-    status: GateStatus
-    reasons: tuple[str, ...]
-    raw_values: dict[str, Any]
+from source.domain.exceptions import InvalidGridParamsError
+from source.domain.value_objects import Gate, GateStatus, GridLaunchStatus, GridType, Symbol, Trend, VerdictAction
 
 
 @dataclass(frozen=True)
@@ -24,6 +17,15 @@ class ProposedGridParams:
     quote_investment: float
     trend: Trend
     grid_type: GridType
+
+    last_price: float
+
+    stop_loss: float | None = None
+    take_profit: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.trend in {Trend.LONG, Trend.SHORT} and self.stop_loss is None and self.take_profit is None:
+            raise InvalidGridParamsError(f"Stop-loss and take-profit must be set for {self.trend.value} grid")
 
     @property
     def grid_range(self) -> float:
@@ -66,33 +68,16 @@ class IndicatorSet:
     last_price: float
     swing_high_14d: float
     swing_low_14d: float
-    # Realized-vol term structure — computed by IndicatorService, consumed by Gate 1
+
     realized_vol_1d: float
     realized_vol_7d: float
     realized_vol_30d: float
 
 
 @dataclass(frozen=True)
-class DecisionVerdict:
-    symbol: Symbol
-    as_of: datetime
-    action: VerdictAction
-    gates: tuple[GateResult, ...]
-    notes: str | None = None
-
-    # Suggested parameters
-    suggested_grid_top: float | None = None
-    suggested_grid_bottom: float | None = None
-    suggested_grid_levels: int | None = None
-    suggested_grid_regime: Trend | None = None
-    suggested_grid_type: GridType | None = None
-    suggested_leverage: int | None = None
-
-
-@dataclass(frozen=True)
 class FundingOiSnapshot:
     symbol: Symbol
-    as_of: datetime
+    created_at: datetime
     funding_rate_last: float
     open_interest: float
     oi_pct_change_7d: float | None  # None until 7 days of stored history exist
@@ -125,5 +110,51 @@ class OpenInterest:
 
 
 @dataclass(frozen=True)
-class IndexPrice:
-    pass
+class GateResult:
+    gate: Gate
+    status: GateStatus
+    reasons: tuple[str, ...]
+    raw_values: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class DecisionVerdict:
+    symbol: Symbol
+    action: VerdictAction
+    gates: tuple[GateResult, ...]
+
+    oid: str | None = None
+    created_at: datetime | None = None
+    notes: str | None = None
+
+    # Suggested parameters
+    suggested_parameters: ProposedGridParams | None = None
+
+
+@dataclass
+class Grid:
+    symbol: Symbol
+    top: float
+    bottom: float
+    levels: int
+    trend: Trend
+    grid_type: GridType
+    leverage: int
+    investment: float
+    status: GridLaunchStatus
+    decision_verdict_oid: str
+
+    oid: str | None = None
+    external_id: str | None = None
+    realized_pnl: float | None = None
+    created_at: datetime | None = None
+    closed_at: datetime | None = None
+    stop_loss: float | None = None
+    take_profit: float | None = None
+
+
+@dataclass(frozen=True)
+class GateRule:
+    triggered: bool
+    status: GateStatus
+    message: str

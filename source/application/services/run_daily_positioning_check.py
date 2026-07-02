@@ -1,8 +1,6 @@
-from datetime import UTC, datetime
-
 import structlog
 
-from source.application.ports import NotifierPort
+from source.application.ports import Notifier
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.gates.assess_positioning_second_gate import AssessPositioningService
 from source.domain.entities import DecisionVerdict, GateResult
@@ -18,7 +16,7 @@ class RunDailyPositioningCheck:
         self,
         second_gate: AssessPositioningService,
         decision_service: DecisionLogService,
-        notifier: NotifierPort,
+        notifier: Notifier,
         settings: Settings,
     ) -> None:
         self._second_gate = second_gate
@@ -26,39 +24,29 @@ class RunDailyPositioningCheck:
         self._notifier = notifier
         self._settings = settings
 
-    async def run(self) -> GateResult:
-        symbol = self._settings.pionex.symbol
+    async def run(self, symbol: Symbol) -> GateResult:
         logger.info("Daily positioning check started", symbol=symbol.value)
 
-        second_gate_result = await self._second_gate.execute(symbol)
+        result = await self._second_gate.execute(symbol)
         logger.info(
             "Gate 2 result",
-            status=second_gate_result.status.name,
-            reasons=list(second_gate_result.reasons),
+            status=result.status.name,
+            reasons=list(result.reasons),
         )
-
-        await self._send_alert(symbol, second_gate_result)
 
         await self._decision_service.persist_verdict(
             DecisionVerdict(
-                as_of=datetime.now(UTC),
                 symbol=symbol,
-                action=self._resolve_action(second_gate_result.status),
-                gates=(second_gate_result,),
-                suggested_grid_top=None,
-                suggested_grid_bottom=None,
-                suggested_leverage=None,
+                action=self._resolve_action(result.status),
+                gates=(result,),
                 notes="daily positioning check",
             )
         )
 
-        return second_gate_result
+        await self._send_alert(symbol, result)
+        return result
 
-    async def _send_alert(
-        self,
-        symbol: Symbol,
-        result: GateResult,
-    ) -> None:
+    async def _send_alert(self, symbol: Symbol, result: GateResult) -> None:
         prev_status = await self._previous_gate2_status(symbol)
 
         if result.status != prev_status:

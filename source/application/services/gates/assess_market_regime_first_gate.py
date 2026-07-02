@@ -1,11 +1,10 @@
 import structlog
 
-from source.application.ports import MarketDataPort
 from source.application.services.grid_builder import GridProposalBuilder
 from source.application.services.indicator_service import IndicatorService
 from source.application.use_cases.check_regime_rules import build_market_regime_checks
 from source.application.utils import evaluate_checks
-from source.domain.entities import Candle, GateResult, IndicatorSet, ProposedGridParams
+from source.domain.entities import GateResult, ProposedGridParams
 from source.domain.value_objects import Gate, Symbol
 from source.settings import Settings
 
@@ -17,18 +16,15 @@ class AssessMarketRegimeService:
     def __init__(
         self,
         settings: Settings,
-        market_data: MarketDataPort,
         indicator_service: IndicatorService,
         grid_builder: GridProposalBuilder,
     ) -> None:
         self._settings = settings
-        self._market_data = market_data
         self._indicator_service = indicator_service
         self._grid_builder = grid_builder
 
     async def execute(self, symbol: Symbol) -> tuple[GateResult, ProposedGridParams]:
-        candles = await self._fetch_candles(symbol)
-        indicators = self._build_indicators_with_candles(candles)
+        indicators = await self._indicator_service.compute(symbol)
         proposal = self._grid_builder.build(symbol, indicators)
         checks = build_market_regime_checks(
             indicators=indicators,
@@ -55,27 +51,3 @@ class AssessMarketRegimeService:
         )
 
         return verdict, proposal
-
-    async def _fetch_candles(self, symbol: Symbol) -> list[Candle]:
-        try:
-            return await self._market_data.get_candles(
-                symbol,
-                interval=self._settings.pionex.kline_interval,
-                limit=self._settings.pionex.limit,
-            )
-        except Exception:
-            logger.exception("Failed to fetch market data", symbol=symbol.value)
-            raise
-
-    def _build_indicators_with_candles(self, candles: list[Candle]) -> IndicatorSet:
-        interval = self._settings.pionex.kline_interval
-
-        try:
-            return self._indicator_service.compute(candles, interval)
-        except Exception:
-            logger.exception(
-                "Failed to build indicators",
-                candle_count=len(candles),
-                interval=interval,
-            )
-            raise

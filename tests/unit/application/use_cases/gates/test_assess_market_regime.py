@@ -65,21 +65,18 @@ def test_atr_range_exactly_at_minimum_passes(
     assert _status(indicators, base_proposal, settings) == GateStatus.PASS
 
 
-def test_price_above_swing_high_is_caution(
+@pytest.mark.parametrize(
+    "last_price",
+    [101_000.0, 87_000.0],
+    ids=["above_swing_high", "below_swing_low"],
+)
+def test_price_outside_swing_range_is_caution(
     base_indicators: IndicatorSet,
     base_proposal: ProposedGridParams,
     settings: DecisionEngineSettings,
+    last_price: float,
 ) -> None:
-    indicators = dataclasses.replace(base_indicators, last_price=101_000.0)
-    assert _status(indicators, base_proposal, settings) == GateStatus.CAUTION
-
-
-def test_price_below_swing_low_is_caution(
-    base_indicators: IndicatorSet,
-    base_proposal: ProposedGridParams,
-    settings: DecisionEngineSettings,
-) -> None:
-    indicators = dataclasses.replace(base_indicators, last_price=87_000.0)
+    indicators = dataclasses.replace(base_indicators, last_price=last_price)
     assert _status(indicators, base_proposal, settings) == GateStatus.CAUTION
 
 
@@ -110,8 +107,6 @@ def test_fail_overrides_caution(
 ) -> None:
     # ADX > 30 (FAIL) + price outside range (CAUTION) → FAIL wins
     indicators = dataclasses.replace(base_indicators, adx14=31.0, last_price=101_000.0)
-    dataclasses.replace(base_indicators)  # re-use proposal from base
-    # just build a proposal inline
 
     proposal = ProposedGridParams(
         symbol=Symbol.BTC,
@@ -122,6 +117,7 @@ def test_fail_overrides_caution(
         quote_investment=1_000.0,
         trend=Trend.NEUTRAL,
         grid_type=GridType.GEOMETRIC,
+        last_price=95_000.0,
     )
     result_status = _status(indicators, proposal, settings)
     assert result_status == GateStatus.FAIL

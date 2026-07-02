@@ -5,7 +5,7 @@ import pytest
 from source.domain.entities import GateResult
 from source.domain.value_objects import Gate, GateStatus, VerdictAction
 from source.infrastructure.telegram.aiogram_notifier import AiogramNotifier
-from tests.fixtures.factories import make_decision_verdict, make_gate_result
+from tests.fixtures.factories import make_decision_verdict, make_gate_result, make_proposed_grid_params
 
 
 @pytest.fixture
@@ -26,9 +26,7 @@ async def test_suggested_range_omitted_when_none(
 ) -> None:
     verdict = make_decision_verdict(
         action=VerdictAction.HOLD,
-        suggested_grid_top=None,
-        suggested_grid_bottom=None,
-        suggested_leverage=None,
+        suggested_parameters=None,
         gates=(make_gate_result(Gate.REGIME_RANGE_FIT, GateStatus.FAIL, ("adx too high",)),),
     )
     await notifier.send_digest(verdict)
@@ -58,14 +56,13 @@ async def test_launch_verdict_includes_confirm_prompt(
 ) -> None:
     verdict = make_decision_verdict(
         action=VerdictAction.LAUNCH,
-        suggested_grid_top=100_000.0,
-        suggested_grid_bottom=88_000.0,
-        suggested_leverage=3,
+        oid="vdct-001",
+        suggested_parameters=make_proposed_grid_params(top=100_000.0, bottom=88_000.0, leverage=3),
         gates=(make_gate_result(Gate.REGIME_RANGE_FIT, GateStatus.PASS),),
     )
     await notifier.send_digest(verdict)
-    text = send_message_mock.call_args.kwargs["text"]
-    assert "/confirm_launch" in text
+    reply_markup = send_message_mock.call_args.kwargs.get("reply_markup")
+    assert reply_markup is not None
 
 
 async def test_hold_verdict_excludes_confirm_prompt(
@@ -74,11 +71,9 @@ async def test_hold_verdict_excludes_confirm_prompt(
 ) -> None:
     verdict = make_decision_verdict(
         action=VerdictAction.HOLD,
-        suggested_grid_top=None,
-        suggested_grid_bottom=None,
-        suggested_leverage=None,
+        suggested_parameters=None,
         gates=(make_gate_result(Gate.REGIME_RANGE_FIT, GateStatus.FAIL, ("adx too high",)),),
     )
     await notifier.send_digest(verdict)
-    text = send_message_mock.call_args.kwargs["text"]
-    assert "/confirm_launch" not in text
+    reply_markup = send_message_mock.call_args.kwargs.get("reply_markup")
+    assert reply_markup is None

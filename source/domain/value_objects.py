@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
 
 
@@ -31,24 +30,35 @@ class Trend(StrEnum):
     NEUTRAL = "no_trend"
 
 
+class GridLaunchStatus(StrEnum):
+    RUNNING = "running"
+    PAUSED = "paused"
+    CLOSED = "closed"
+    LIQUIDATED = "liquidated"
+
+
 class Symbol(StrEnum):
     BTC = "BTC_USDT_PERP"
+    ETH = "ETH_USDT_PERP"
+    SOL = "SOL_USDT_PERP"
+    XRP = "XRP_USDT_PERP"
+    XAUT = "XAUT_USDT_PERP"
 
     @property
-    def get_quote(self) -> str:
-        return self.split("_")[0]
-
-    @property
-    def get_base(self) -> str:
+    def quote(self) -> str:
         return self.split("_")[1]
 
     @property
-    def get_type(self) -> str:
+    def base(self) -> str:
+        return self.split("_")[0]
+
+    @property
+    def type_(self) -> str:
         return self.split("_")[2]
 
+    @property
+    def regime(self) -> GridType:
+        if self in {self.XRP, self.XAUT}:
+            return GridType.ARITHMETIC
 
-@dataclass(frozen=True)
-class GateRule:
-    triggered: bool
-    status: GateStatus
-    message: str
+        return GridType.GEOMETRIC

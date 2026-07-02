@@ -6,9 +6,16 @@ from typing import ClassVar
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
+import structlog
 
 from source.application.exceptions import InsufficientKlineDataError, UnsupportedIntervalError
+from source.application.ports import MarketDataPort
 from source.domain.entities import Candle, IndicatorSet
+from source.domain.value_objects import Symbol
+from source.settings import PionexSettings
+
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class IndicatorService:
@@ -23,18 +30,25 @@ class IndicatorService:
     }
     _MIN_LOOKBACK_DAYS = 31
 
-    def compute(self, klines: list[Candle], interval: str) -> IndicatorSet:
+    def __init__(self, settings: PionexSettings, market_data: MarketDataPort) -> None:
+        self._settings = settings
+        self._market_data = market_data
+
+    async def compute(self, symbol: Symbol) -> IndicatorSet:
+        interval = self._settings.kline_interval
+
         if interval not in self._INTERVAL_CANDLES_PER_DAY:
             raise UnsupportedIntervalError(f"No candles-per-day mapping for interval={interval!r}")
 
-        candles_pd = self._INTERVAL_CANDLES_PER_DAY[interval]
+        candles: list[Candle] = await self._pull_candles(symbol)
 
-        if len(klines) < (min_candles := self._MIN_LOOKBACK_DAYS * candles_pd):
+        candles_pd = self._INTERVAL_CANDLES_PER_DAY[interval]
+        if len(candles) < (min_candles := self._MIN_LOOKBACK_DAYS * candles_pd):
             raise InsufficientKlineDataError(
-                f"Need >= {min_candles} candles for interval={interval!r}, got {len(klines)}"
+                f"Need >= {min_candles} candles for interval={interval!r}, got {len(candles)}"
             )
 
-        dataframe = self._convert_to_dataframe(klines)
+        dataframe = self._convert_to_dataframe(candles)
 
         adx14 = float(
             ta.adx(
@@ -76,6 +90,17 @@ class IndicatorService:
 
         self._validate_no_nan(result)
         return result
+
+    async def _pull_candles(self, symbol: Symbol) -> list[Candle]:
+        try:
+            return await self._market_data.get_candles(
+                symbol,
+                interval=self._settings.kline_interval,
+                limit=self._settings.limit,
+            )
+        except Exception:
+            logger.exception("Failed to fetch market data", symbol=symbol.value)
+            raise
 
     @staticmethod
     def _convert_to_dataframe(klines: list[Candle]) -> pd.DataFrame:

@@ -47,7 +47,7 @@ def make_indicator_set(**overrides: object) -> IndicatorSet:
 def make_funding_oi_snapshot(**overrides: object) -> FundingOiSnapshot:
     defaults: dict[str, object] = {
         "symbol": Symbol.BTC,
-        "as_of": FIXED_NOW,
+        "created_at": FIXED_NOW,
         "funding_rate_last": 0.0001,
         "open_interest": 5_000_000.0,
         "oi_pct_change_7d": 5.0,
@@ -65,6 +65,7 @@ def make_proposed_grid_params(**overrides: object) -> ProposedGridParams:
         "grid_levels": 50,
         "leverage": 3,
         "quote_investment": 1_000.0,
+        "last_price": 95_000.0,
     }
     return ProposedGridParams(**(defaults | overrides))  # type: ignore[arg-type]
 
@@ -113,7 +114,7 @@ def make_decision_verdict(**overrides: object) -> DecisionVerdict:
     )
     defaults: dict[str, object] = {
         "symbol": Symbol.BTC,
-        "as_of": FIXED_NOW,
+        "created_at": FIXED_NOW,
         "action": VerdictAction.LAUNCH,
         "gates": gates,
         "notes": None,
