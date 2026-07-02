@@ -70,20 +70,19 @@ class CheckFuturesGridParametersRequestSchema(BaseSchema):
     bu_order_data: DataObject = Field(alias="buOrderData")
 
 
-class CheckFuturesGridParametersDataObject(BaseSchema):
-    min_investment: str | None = None
-    max_investment: str | None = None
-    slippage: str | None = None
-    estimate_per_volume: str | None = None
-    estimate_investment: str | None = None
+class CheckFuturesGridParametersDataObject(CamelSchema):
     estimate_extra_margin: str | None = None
     estimate_fee: str | None = None
-    estimate_position_occupy_margin: str | None = None
-    estimate_order_occupy_margin: str | None = None
     estimate_position: str | None = None
-
-    estimate_liquidation_price_up: StringFloat
+    slippage: str | None = None
+    estimate_investment: str | None = None
+    estimate_position_occupy_margin: str | None = None
     estimate_liquidation_price_down: StringFloat
+    min_investment: str | None = None
+    estimate_liquidation_price_up: StringFloat
+    max_investment: str | None = None
+    estimate_order_occupy_margin: str | None = None
+    estimate_per_volume: str | None = None
 
 
 class CheckFuturesGridParametersResponseSchema(SuccessResponse[CheckFuturesGridParametersDataObject]): ...
