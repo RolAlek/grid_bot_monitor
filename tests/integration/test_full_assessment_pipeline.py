@@ -97,14 +97,14 @@ def _make_decision_service() -> tuple[DecisionLogService, FakeDecisionLogReposit
     return DecisionLogService(provider), repo
 
 
-def _make_oi_service() -> OISnapshotService:
+def _make_oi_service(market_data: FakeMarketData) -> OISnapshotService:
     repo = FakeSnapshotRepository()
 
     @asynccontextmanager
     async def provider() -> AsyncGenerator[FakeSnapshotRepository, None]:
         yield repo
 
-    return OISnapshotService(provider)
+    return OISnapshotService(provider, market_data_client=market_data)
 
 
 def _make_pipeline(
@@ -115,15 +115,15 @@ def _make_pipeline(
 ) -> tuple[RunWeeklyFullAssessment, FakeNotifier, FakeGridValidation, FakeDecisionLogRepository]:
     settings = _make_settings()
     decision_service, repo = _make_decision_service()
-    oi_service = _make_oi_service()
     market_data = FakeMarketData(candles, funding_rate=funding_rate, open_interest=open_interest)
+    oi_service = _make_oi_service(market_data)
     grid_validation = FakeGridValidation(liquidation_estimate)
     notifier = FakeNotifier()
 
-    indicator_service = IndicatorService()
+    indicator_service = IndicatorService(settings=settings.pionex, market_data=market_data)
     grid_builder = GridProposalBuilder(settings.decision_engine)
 
-    gate1 = AssessMarketRegimeService(settings, market_data, indicator_service, grid_builder)
+    gate1 = AssessMarketRegimeService(settings, indicator_service, grid_builder)
     gate2 = AssessPositioningService(settings.decision_engine, market_data, oi_service)
     gate3 = AssessLiquidationSafetyService(settings.decision_engine, grid_validation)
 
@@ -165,7 +165,7 @@ async def test_launch_path_all_gates_pass() -> None:
         notifier=notifier,
         settings=settings,
     )
-    verdict = await runner.run()
+    verdict = await runner.run(Symbol.BTC)
 
     assert verdict.action == VerdictAction.LAUNCH
     assert gate1.execute.call_count == 1
@@ -214,7 +214,7 @@ async def test_hold_path_gate1_fail_short_circuits() -> None:
         notifier=notifier,
         settings=settings,
     )
-    verdict = await runner.run()
+    verdict = await runner.run(Symbol.BTC)
 
     assert verdict.action == VerdictAction.HOLD
     assert gate2.execute.call_count == 0, "Gate 2 must be skipped when Gate 1 FAILs"
