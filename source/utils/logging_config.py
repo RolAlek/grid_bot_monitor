@@ -124,6 +124,7 @@ def configure_logging(settings: "AppSettings") -> None:
             "sqlalchemy.pool": {"level": "WARNING", "propagate": True},
             "apscheduler": {"level": "INFO", "propagate": True},
             "aiogram": {"level": "INFO", "propagate": True},
+            "numba": {"level": "WARNING", "propagate": True},
         },
     })
 
