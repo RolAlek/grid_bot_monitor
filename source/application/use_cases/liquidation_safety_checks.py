@@ -45,12 +45,13 @@ def build_liquidation_safety_checks(
     min_distance = min_distance_pct * proposal.last_price
 
     if proposal.trend == Trend.LONG and proposal.stop_loss and proposal.take_profit:
+        liq_down = estimate.estimate_liquidation_price_down
         rules.extend([
             GateRule(
-                triggered=down is not None and proposal.stop_loss <= down,
+                triggered=liq_down is not None and proposal.stop_loss <= liq_down,
                 status=GateStatus.FAIL,
-                message=f"Stop-loss {proposal.stop_loss:.2f} at/below liquidation {down:.2f}"
-                if down is not None
+                message=f"Stop-loss {proposal.stop_loss:.2f} at/below liquidation {liq_down:.2f}"
+                if liq_down is not None
                 else "",
             ),
             GateRule(
@@ -73,11 +74,14 @@ def build_liquidation_safety_checks(
         ])
 
     if proposal.trend == Trend.SHORT and proposal.stop_loss and proposal.take_profit:
+        liq_up = estimate.estimate_liquidation_price_up
         rules.extend([
             GateRule(
-                triggered=up is not None and proposal.stop_loss >= up,
+                triggered=liq_up is not None and proposal.stop_loss >= liq_up,
                 status=GateStatus.FAIL,
-                message=f"Stop-loss {proposal.stop_loss:.2f} at/above liquidation {up:.2f}" if up is not None else "",
+                message=f"Stop-loss {proposal.stop_loss:.2f} at/above liquidation {liq_up:.2f}"
+                if liq_up is not None
+                else "",
             ),
             GateRule(
                 triggered=(proposal.stop_loss - proposal.last_price) < min_distance,
