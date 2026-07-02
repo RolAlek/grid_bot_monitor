@@ -21,7 +21,26 @@ class CustomPionexAuth(Auth):
         yield request
 
     def _generate_signature(self, request: Request) -> str:
-        prehash = request.method.upper().encode("utf-8") + request.content + request.url.raw_path
+        method = request.method.upper().encode("utf-8")
+        body = request.content or b""
+
+        # raw_path includes path + query, e.g. b"/api/v1/checkParams?timestamp=123"
+        raw = request.url.raw_path
+        if b"?" in raw:
+            path_bytes, query_bytes = raw.split(b"?", 1)
+        else:
+            path_bytes, query_bytes = raw, b""
+
+        # Extract timestamp value for the standalone TIMESTAMP component
+        timestamp = b""
+        if query_bytes:
+            for part in query_bytes.split(b"&"):
+                if part.startswith(b"timestamp="):
+                    timestamp = part[len(b"timestamp=") :]
+                    break
+
+        # Per Pionex docs: METHOD + PATH_URL + QUERY + TIMESTAMP + body
+        prehash = method + path_bytes + query_bytes + timestamp + body
 
         return hmac.new(
             key=self._settings.api_secret.get_secret_value().encode("utf-8"),
