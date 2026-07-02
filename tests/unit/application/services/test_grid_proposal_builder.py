@@ -48,15 +48,20 @@ def test_grid_levels_scales_with_range(builder: GridProposalBuilder) -> None:
     assert result_wide.grid_levels > result_narrow.grid_levels
 
 
-def test_grid_levels_clamped_to_max(settings: DecisionEngineSettings) -> None:
+@pytest.mark.parametrize(
+    ("atr14", "expected_bound"),
+    [
+        (1.0, "max"),
+        (100_000.0, "min"),
+    ],
+)
+def test_grid_levels_clamped_to_bound(
+    settings: DecisionEngineSettings,
+    atr14: float,
+    expected_bound: str,
+) -> None:
     builder = GridProposalBuilder(settings)
-    ind = make_indicator_set(atr14=1.0, swing_high_14d=100_000.0, swing_low_14d=88_000.0)
+    ind = make_indicator_set(atr14=atr14, swing_high_14d=100_000.0, swing_low_14d=88_000.0)
     proposal = builder.build(Symbol.BTC, ind)
-    assert proposal.grid_levels == settings.max_grid_rows
-
-
-def test_grid_levels_clamped_to_min(settings: DecisionEngineSettings) -> None:
-    builder = GridProposalBuilder(settings)
-    ind = make_indicator_set(atr14=100_000.0, swing_high_14d=100_000.0, swing_low_14d=88_000.0)
-    proposal = builder.build(Symbol.BTC, ind)
-    assert proposal.grid_levels == settings.min_grid_rows
+    expected = settings.max_grid_rows if expected_bound == "max" else settings.min_grid_rows
+    assert proposal.grid_levels == expected

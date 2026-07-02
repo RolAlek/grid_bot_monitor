@@ -2,7 +2,7 @@ import dataclasses
 
 import pytest
 
-from source.application.use_cases.check_positioning_rueles import build_positioning_checks
+from source.application.use_cases.check_positioning_rules import build_positioning_checks
 from source.application.utils import evaluate_checks
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
 from source.domain.entities import FundingOiSnapshot
@@ -57,25 +57,24 @@ def test_oi_change_none_is_caution_not_pass(
     )
 
 
-def test_crowded_long_fails(
+@pytest.mark.parametrize(
+    ("funding_pct", "direction"),
+    [
+        (25.0, "long"),
+        (-25.0, "short"),
+    ],
+)
+def test_crowded_directional_fails(
     base_snapshot: FundingOiSnapshot,
     settings: DecisionEngineSettings,
+    funding_pct: float,
+    direction: str,
 ) -> None:
-    # funding=25% (> caution_pct=20), oi_change=21% (> fail_pct=20) → crowded long FAIL
-    snapshot = _snap_with_funding(base_snapshot, 25.0, oi_change=21.0)
+    # funding > caution_pct=20, oi_change=21% > fail_pct=20 → crowded FAIL
+    snapshot = _snap_with_funding(base_snapshot, funding_pct, oi_change=21.0)
     assert _status(snapshot, settings) == GateStatus.FAIL
     reasons = _reasons(snapshot, settings)
-    assert any("long" in reason.lower() or "Crowded" in reason for reason in reasons)
-
-
-def test_crowded_short_fails(
-    base_snapshot: FundingOiSnapshot,
-    settings: DecisionEngineSettings,
-) -> None:
-    snapshot = _snap_with_funding(base_snapshot, -25.0, oi_change=21.0)
-    assert _status(snapshot, settings) == GateStatus.FAIL
-    reasons = _reasons(snapshot, settings)
-    assert any("short" in reason.lower() or "Crowded" in reason for reason in reasons)
+    assert any(direction in reason.lower() or "Crowded" in reason for reason in reasons)
 
 
 def test_crowded_long_below_fail_oi_threshold_is_caution(
