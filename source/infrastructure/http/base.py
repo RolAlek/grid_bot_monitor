@@ -2,11 +2,15 @@ from collections.abc import Sequence
 from http import HTTPMethod
 from typing import Any, cast
 
+import structlog
 from httpx import AsyncClient, Auth
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from source.infrastructure.exceptions import HttpSerializationError, HttpValidationError
 from source.infrastructure.http.types import HeaderTypes, IncExType, PayloadType, RequestJson, TError, TResponse
+
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class BaseHTTPClient:
@@ -100,6 +104,13 @@ class BaseHTTPClient:
             )
 
         async with AsyncClient(base_url=self._base_url, timeout=self._timeout, auth=self._auth) as client:
+            logger.info(
+                "HTTP request",
+                method=method,
+                url=f"{self._base_url}{path}",
+                params=params,
+                body=serialized_payload,
+            )
             response = await client.request(
                 method=method,
                 url=path,
@@ -108,10 +119,18 @@ class BaseHTTPClient:
                 json=serialized_payload,
             )
 
+        response_body = await response.aread()
+        logger.info(
+            "HTTP response",
+            method=method,
+            url=f"{self._base_url}{path}",
+            status_code=response.status_code,
+            body=response_body.decode(errors="replace"),
+        )
         response.raise_for_status()
 
         return self._validate_response(
-            content=await response.aread(),
+            content=response_body,
             response_model=response_model,
             error_model=error_model,
         )
