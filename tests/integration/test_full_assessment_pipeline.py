@@ -1,6 +1,5 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 from source.application.services.decision_log_service import DecisionLogService
@@ -14,7 +13,6 @@ from source.application.services.run_weekly_full_assessment import RunWeeklyFull
 from source.domain.entities import (
     Candle,
     DecisionVerdict,
-    FundingOiSnapshot,
     FundingRate,
     GateResult,
     LiquidationEstimate,
@@ -24,7 +22,7 @@ from source.domain.entities import (
 from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
 from source.settings import DecisionEngineSettings
 from tests.fixtures.factories import FIXED_NOW, make_proposed_grid_params
-from tests.fixtures.fakes import FakeDecisionLogRepository
+from tests.fixtures.fakes import FakeDecisionLogRepository, FakeSnapshotRepository
 
 
 class FakeMarketData:
@@ -68,14 +66,6 @@ class FakeNotifier:
 
     async def send_digest(self, verdict: DecisionVerdict) -> None:
         self.sent_digests.append(verdict)
-
-
-class FakeSnapshotRepository:
-    async def save_snapshot(self, snapshot: FundingOiSnapshot) -> None:
-        pass
-
-    async def get_oi_snapshots_last_7d(self, symbol: Symbol, as_of: datetime) -> list[FundingOiSnapshot]:  # noqa: ARG002
-        return []  # return empty → OI change will be None (≤ 2 snapshots)
 
 
 def _make_settings() -> MagicMock:  # type: ignore[type-arg]
@@ -172,8 +162,8 @@ async def test_launch_path_all_gates_pass() -> None:
     assert gate2.execute.call_count == 1
     assert gate3.execute.call_count == 1
     assert len(notifier.sent_digests) == 1
-    assert len(repo._saved) == 1  # noqa: SLF001
-    assert repo._saved[0] is verdict  # noqa: SLF001
+    assert len(repo._storage) == 1  # noqa: SLF001
+    assert repo._storage[0] is verdict  # noqa: SLF001
     assert len(verdict.gates) == 3
 
 
