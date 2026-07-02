@@ -21,6 +21,9 @@ def proposal() -> ProposedGridParams:
         quote_investment=1_000.0,
         trend=Trend.LONG,
         grid_type=GridType.GEOMETRIC,
+        last_price=96_000.0,
+        stop_loss=80_000.0,
+        take_profit=110_000.0,
     )
 
 
@@ -88,18 +91,13 @@ async def test_exactly_at_ttl_is_stale(
     assert mock_delegate.check_grid_params.call_count == 2
 
 
-async def test_different_proposals_cached_independently(guard: StalenessGuardAdapter, mock_delegate: AsyncMock) -> None:
-    proposal_a = ProposedGridParams(
-        symbol=Symbol.BTC,
-        top=100_000.0,
-        bottom=88_000.0,
-        grid_levels=50,
-        leverage=3,
-        quote_investment=1_000.0,
-        trend=Trend.LONG,
-        grid_type=GridType.GEOMETRIC,
-    )
-    proposal_b = dataclasses.replace(proposal_a, top=95_000.0, bottom=85_000.0)
+async def test_different_proposals_cached_independently(
+    guard: StalenessGuardAdapter,
+    mock_delegate: AsyncMock,
+    proposal: ProposedGridParams,
+) -> None:
+    proposal_a = dataclasses.replace(proposal)
+    proposal_b = dataclasses.replace(proposal, top=95_000.0, bottom=85_000.0)
 
     mock_delegate.check_grid_params.side_effect = [_estimate(proposal_a), _estimate(proposal_b)]
 
@@ -108,18 +106,13 @@ async def test_different_proposals_cached_independently(guard: StalenessGuardAda
     assert mock_delegate.check_grid_params.call_count == 2
 
 
-async def test_cache_reused_per_proposal(guard: StalenessGuardAdapter, mock_delegate: AsyncMock) -> None:
-    proposal_a = ProposedGridParams(
-        symbol=Symbol.BTC,
-        top=100_000.0,
-        bottom=88_000.0,
-        grid_levels=50,
-        leverage=3,
-        quote_investment=1_000.0,
-        trend=Trend.LONG,
-        grid_type=GridType.GEOMETRIC,
-    )
-    proposal_b = dataclasses.replace(proposal_a, top=95_000.0, bottom=85_000.0)
+async def test_cache_reused_per_proposal(
+    guard: StalenessGuardAdapter,
+    mock_delegate: AsyncMock,
+    proposal: ProposedGridParams,
+) -> None:
+    proposal_a = dataclasses.replace(proposal)
+    proposal_b = dataclasses.replace(proposal, top=95_000.0, bottom=85_000.0)
 
     mock_delegate.check_grid_params.side_effect = [_estimate(proposal_a), _estimate(proposal_b)]
 

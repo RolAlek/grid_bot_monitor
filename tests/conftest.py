@@ -68,6 +68,7 @@ def base_proposal() -> ProposedGridParams:
         quote_investment=1_000.0,
         trend=Trend.NEUTRAL,
         grid_type=GridType.GEOMETRIC,
+        last_price=96_000.0,
     )
 
 
@@ -75,7 +76,7 @@ def base_proposal() -> ProposedGridParams:
 def base_snapshot() -> FundingOiSnapshot:
     return FundingOiSnapshot(
         symbol=Symbol.BTC,
-        as_of=FIXED_NOW,
+        created_at=FIXED_NOW,
         funding_rate_last=0.0001,
         open_interest=5_000_000.0,
         oi_pct_change_7d=5.0,
