@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import URL
 
 
 class LogLevel(StrEnum):
@@ -80,14 +81,26 @@ class DecisionEngineSettings(_BaseSettings):
 
 
 class DatabaseSettings(_BaseSettings):
-    url: str = "sqlite+aiosqlite:///{}.db"
-    name: str = "advisor"
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_user: str = "postgres"
+    db_password: SecretStr
+    db_name: str = "grid_advisor"
 
-    echo: bool = False
+    db_echo: bool = False
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
 
     @property
-    def connection_url(self) -> str:
-        return self.url.format(self.name)
+    def connection_url(self) -> URL:
+        return URL.create(
+            drivername="postgresql+asyncpg",
+            username=self.db_user,
+            password=self.db_password.get_secret_value(),
+            host=self.db_host,
+            port=self.db_port,
+            database=self.db_name,
+        )
 
 
 class TelegramSettings(_BaseSettings):

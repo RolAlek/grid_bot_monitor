@@ -7,7 +7,10 @@ settings = get_settings()
 
 engine: AsyncEngine = create_async_engine(
     url=settings.database.connection_url,
-    echo=settings.database.echo,
+    echo=settings.database.db_echo,
+    pool_size=settings.database.db_pool_size,
+    max_overflow=settings.database.db_max_overflow,
+    pool_pre_ping=True,
 )
 async_session_factory = async_sessionmaker(
     bind=engine,
