@@ -1,12 +1,15 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import CheckConstraint, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from source.domain.value_objects import VerdictAction
 from source.infrastructure.database.models.base import Base
-from source.infrastructure.database.models.grid_launch import GridLaunchModel
 from source.infrastructure.database.models.types import JSONType, SymbolType
+
+
+if TYPE_CHECKING:
+    from source.infrastructure.database.models.grid_launch import GridLaunchModel
 
 
 class DecisionLog(Base):
@@ -23,4 +26,4 @@ class DecisionLog(Base):
     gates_json: Mapped[tuple[dict[str, Any]]] = mapped_column(JSONType)
     notes: Mapped[str | None]
 
-    launched_grid: Mapped[GridLaunchModel | None] = relationship(back_populates="decision_verdict", lazy="joined")
+    launched_grid: Mapped["GridLaunchModel | None"] = relationship(back_populates="decision_verdict", lazy="joined")

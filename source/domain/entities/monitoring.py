@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 from source.domain.value_objects import AlertType, HealthStatus, Symbol
@@ -6,8 +6,8 @@ from source.domain.value_objects import AlertType, HealthStatus, Symbol
 
 @dataclass
 class ActiveBot:
-    grid_launch_oid: str
     symbol: Symbol
+    oid: str | None = None
     external_bot_id: str | None = None
     status: str = ""
     health_status: HealthStatus = HealthStatus.GREEN
@@ -19,14 +19,13 @@ class ActiveBot:
     last_health_check_at: datetime | None = None
     auto_adjust_enabled: bool = False
     paused_by_monitor: bool = False
-    oid: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
 
 @dataclass(frozen=True)
 class HealthSnapshot:
-    active_bot_oid: str
+    grid_launch_oid: str
     symbol: Symbol
     created_at: datetime
 
@@ -53,16 +52,16 @@ class HealthSnapshot:
 
     health_status: HealthStatus = HealthStatus.GREEN
     health_score: float = 1.0
-    triggered_alerts: tuple[str, ...] = field(default_factory=tuple)
 
 
 @dataclass
 class Alert:
-    active_bot_oid: str
+    grid_launch_oid: str
     symbol: Symbol
     alert_type: AlertType
     severity: HealthStatus
     message: str
+    health_snapshot_oid: str | None = None
     acknowledged: bool = False
     acknowledged_by: str | None = None
     acknowledged_at: datetime | None = None
