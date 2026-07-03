@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.domain.entities import Grid
 from source.domain.value_objects import GridLaunchStatus, GridType, Symbol, Trend
-from source.infrastructure.database.models.models import GridLaunchModel
+from source.infrastructure.database.models import GridLaunchModel
 from source.infrastructure.database.repositories.alchemy.base import SQLAlchemyBaseRepository
 
 
