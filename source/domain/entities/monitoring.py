@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 from source.domain.value_objects import AlertType, HealthStatus, Symbol
 
@@ -24,10 +25,10 @@ class ActiveBot:
 
 
 @dataclass(frozen=True)
-class HealthSnapshot:
-    grid_launch_oid: str
+class HealthMetricsInput:
     symbol: Symbol
-    created_at: datetime
+    last_price: float
+    leverage: int
 
     adx14: float
     atr14: float
@@ -35,23 +36,30 @@ class HealthSnapshot:
     rsi14: float
     realized_vol_1d: float
     realized_vol_7d: float
-    last_price: float
 
     unrealized_pnl: float
     unrealized_pnl_pct: float
     grid_fill_ratio: float
+
+    distance_to_liquidation_pct: float
+    liquidation_price: float | None = None
+
+    funding_rate_annualized_pct: float = 0.0
+
+
+@dataclass(frozen=True, kw_only=True)
+class HealthSnapshot(HealthMetricsInput):
+    grid_launch_oid: str
+    created_at: datetime
+
     matched_orders: int = 0
     total_orders: int = 0
 
-    distance_to_liquidation_pct: float = 0.0
-    liquidation_price: float | None = None
-    leverage: int = 1
-
     funding_rate: float = 0.0
-    funding_rate_annualized_pct: float = 0.0
 
     health_status: HealthStatus = HealthStatus.GREEN
     health_score: float = 1.0
+    triggered_alerts: tuple[str, ...] = field(default_factory=tuple)
 
 
 @dataclass
@@ -67,3 +75,11 @@ class Alert:
     acknowledged_at: datetime | None = None
     oid: str | None = None
     created_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class ClassificationResult:
+    status: HealthStatus
+    score: float
+    alerts: tuple[AlertType, ...]
+    details: dict[str, Any] = field(default_factory=dict)
