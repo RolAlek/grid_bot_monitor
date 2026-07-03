@@ -1,8 +1,8 @@
 """initial_postgresql_schema
 
-Revision ID: 3fc708f8475a
+Revision ID: ee11aadbec68
 Revises:
-Create Date: 2026-07-03 18:25:34.368827
+Create Date: 2026-07-03 21:19:08.943741
 
 """
 
@@ -10,10 +10,10 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "3fc708f8475a"
+revision: str = "ee11aadbec68"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,10 +26,10 @@ def upgrade() -> None:
         "decision_logs",
         sa.Column("symbol", sa.String(length=16), nullable=False),
         sa.Column("action", sa.String(length=32), nullable=False),
-        sa.Column("gates_json", sa.JSON(), nullable=False),
+        sa.Column("gates_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("notes", sa.String(), nullable=True),
         sa.Column("oid", sa.String(length=36), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint("action IN ('launch', 'hold', 'review')", name="chk_action"),
         sa.PrimaryKeyConstraint("oid"),
     )
@@ -42,13 +42,16 @@ def upgrade() -> None:
         sa.Column("open_interest", sa.Float(), nullable=False),
         sa.Column("oi_pct_change_7d", sa.Float(), nullable=True),
         sa.Column("oid", sa.String(length=36), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.PrimaryKeyConstraint("oid"),
     )
     op.create_index("idx_oi_snapshot_symbol_created_at", "oi_snapshots", ["symbol", "created_at"], unique=False)
     op.create_index(op.f("ix_oi_snapshots_symbol"), "oi_snapshots", ["symbol"], unique=False)
     op.create_index(
-        "uq_oi_snapshot_symbol_date", "oi_snapshots", ["symbol", sa.literal_column("date(created_at)")], unique=True
+        "uq_oi_snapshot_symbol_date",
+        "oi_snapshots",
+        ["symbol", sa.literal_column("((created_at AT TIME ZONE 'UTC')::date)")],
+        unique=True,
     )
     op.create_table(
         "grid_launches",
@@ -62,8 +65,8 @@ def upgrade() -> None:
         sa.Column("quote_investment", sa.Float(), nullable=False),
         sa.Column("stop_loss", sa.Float(), nullable=True),
         sa.Column("take_profit", sa.Float(), nullable=True),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.Column("closed_at", sa.DateTime(), nullable=True),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("closed_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=True),
         sa.Column("realized_pnl", sa.Float(), nullable=True),
         sa.Column("status", sa.String(length=16), nullable=False),
         sa.Column("external_id", sa.String(), nullable=True),
@@ -76,7 +79,7 @@ def upgrade() -> None:
         sa.Column("paused_by_monitor", sa.Boolean(), nullable=False),
         sa.Column("decision_verdict_oid", sa.String(length=36), nullable=False),
         sa.Column("oid", sa.String(length=36), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint(
             "(closed_at IS NULL AND status IN ('running', 'paused')) OR (closed_at IS NOT NULL AND status IN ('closed', 'liquidated'))",
             name="ck_grid_launches_status_closed_at_consistency",
@@ -107,7 +110,6 @@ def upgrade() -> None:
     )
     op.create_table(
         "health_snapshots",
-        sa.Column("grid_launch_oid", sa.String(length=36), nullable=False),
         sa.Column("symbol", sa.String(length=16), nullable=False),
         sa.Column("adx14", sa.Float(), nullable=False),
         sa.Column("atr14", sa.Float(), nullable=False),
@@ -128,8 +130,9 @@ def upgrade() -> None:
         sa.Column("funding_rate_annualized_pct", sa.Float(), nullable=False),
         sa.Column("health_status", sa.String(length=16), nullable=False),
         sa.Column("health_score", sa.Float(), nullable=False),
+        sa.Column("grid_launch_oid", sa.String(length=36), nullable=False),
         sa.Column("oid", sa.String(length=36), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint("health_status IN ('green', 'yellow', 'red')", name="chk_health_status"),
         sa.ForeignKeyConstraint(
             ["grid_launch_oid"],
@@ -152,7 +155,7 @@ def upgrade() -> None:
         sa.Column("health_snapshot_oid", sa.String(length=36), nullable=True),
         sa.Column("grid_launch_oid", sa.String(length=36), nullable=False),
         sa.Column("oid", sa.String(length=36), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint(
             "alert_type IN ('status_change', 'liquidation_risk', 'grid_depletion', 'high_funding', 'volatility_spike', 'pnl_drawdown', 'api_error')",
             name="chk_alert_type",
