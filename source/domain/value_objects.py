@@ -62,3 +62,28 @@ class Symbol(StrEnum):
             return GridType.ARITHMETIC
 
         return GridType.GEOMETRIC
+
+
+class HealthStatus(StrEnum):
+    GREEN = "green"
+    YELLOW = "yellow"
+    RED = "red"
+
+
+class AlertType(StrEnum):
+    STATUS_CHANGE = "status_change"
+    LIQUIDATION_RISK = "liquidation_risk"
+    GRID_DEPLETION = "grid_depletion"
+    HIGH_FUNDING = "high_funding"
+    VOLATILITY_SPIKE = "volatility_spike"
+    PNL_DRAWDOWN = "pnl_drawdown"
+    API_ERROR = "api_error"
+
+
+class ActionType(StrEnum):
+    PAUSE = "pause"
+    RESUME = "resume"
+    CLOSE = "close"
+    RECONFIGURE = "reconfigure"
+    ACKNOWLEDGE = "acknowledge"
+    NONE = "none"
