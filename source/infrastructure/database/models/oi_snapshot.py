@@ -1,4 +1,4 @@
-from sqlalchemy import Index, func, text
+from sqlalchemy import Index, text
 from sqlalchemy.orm import Mapped
 
 from source.infrastructure.database.models.base import Base
@@ -9,7 +9,7 @@ class OISnapshot(Base):
     __tablename__ = "oi_snapshots"
     __table_args__ = (
         Index("idx_oi_snapshot_symbol_created_at", "symbol", "created_at"),
-        Index("uq_oi_snapshot_symbol_date", "symbol", func.date(text("created_at")), unique=True),
+        Index("uq_oi_snapshot_symbol_date", "symbol", text("((created_at AT TIME ZONE 'UTC')::date)"), unique=True),
     )
 
     symbol: Mapped[SymbolType]

@@ -12,6 +12,7 @@ from source.infrastructure.database.models.types import CreatedAt, SymbolType, U
 
 if TYPE_CHECKING:
     from source.infrastructure.database.models.alert import AlertModel
+    from source.infrastructure.database.models.health_snapshot import HealthSnapshotModel
 
 
 class GridLaunchModel(Base):
@@ -79,5 +80,5 @@ class GridLaunchModel(Base):
     decision_verdict_oid: Mapped[str] = mapped_column(String(36), ForeignKey("decision_logs.oid"), index=True)
     decision_verdict: Mapped[DecisionLog] = relationship(back_populates="launched_grid", lazy="joined")
 
-    # Monitoring relationships
     alerts: Mapped[list["AlertModel"]] = relationship(back_populates="grid_launch")
+    health_snapshots: Mapped[list["HealthSnapshotModel"]] = relationship(back_populates="grid_launch")
