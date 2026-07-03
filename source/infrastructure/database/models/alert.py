@@ -6,11 +6,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from source.domain.value_objects import AlertType
 from source.infrastructure.database.models.base import Base
-from source.infrastructure.database.models.grid_launch import GridLaunchModel
 from source.infrastructure.database.models.types import SymbolType
 
 
 if TYPE_CHECKING:
+    from source.infrastructure.database.models.grid_launch import GridLaunchModel
     from source.infrastructure.database.models.health_snapshot import HealthSnapshotModel
 
 
@@ -43,4 +43,4 @@ class AlertModel(Base):
     health_snapshot: Mapped["HealthSnapshotModel | None"] = relationship(back_populates="alerts")
 
     grid_launch_oid: Mapped[str] = mapped_column(String(36), ForeignKey("grid_launches.oid"), index=True)
-    grid_launch: Mapped["GridLaunchModel"]
+    grid_launch: Mapped["GridLaunchModel"] = relationship(back_populates="alerts")

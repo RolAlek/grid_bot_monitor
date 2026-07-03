@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -7,6 +8,10 @@ from source.domain.value_objects import GridLaunchStatus, GridType, HealthStatus
 from source.infrastructure.database.models.base import Base
 from source.infrastructure.database.models.decision_log import DecisionLog
 from source.infrastructure.database.models.types import CreatedAt, SymbolType, UpdatedAt
+
+
+if TYPE_CHECKING:
+    from source.infrastructure.database.models.alert import AlertModel
 
 
 class GridLaunchModel(Base):
@@ -73,3 +78,6 @@ class GridLaunchModel(Base):
 
     decision_verdict_oid: Mapped[str] = mapped_column(String(36), ForeignKey("decision_logs.oid"), index=True)
     decision_verdict: Mapped[DecisionLog] = relationship(back_populates="launched_grid", lazy="joined")
+
+    # Monitoring relationships
+    alerts: Mapped[list["AlertModel"]] = relationship(back_populates="grid_launch")

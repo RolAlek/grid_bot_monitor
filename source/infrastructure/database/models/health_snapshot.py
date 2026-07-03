@@ -1,10 +1,16 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import CheckConstraint, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from source.domain.value_objects import HealthStatus
-from source.infrastructure.database.models.alert import AlertModel
 from source.infrastructure.database.models.base import Base
 from source.infrastructure.database.models.types import SymbolType
+
+
+if TYPE_CHECKING:
+    from source.infrastructure.database.models.alert import AlertModel
+    from source.infrastructure.database.models.grid_launch import GridLaunchModel
 
 
 class HealthSnapshotModel(Base):
@@ -17,7 +23,6 @@ class HealthSnapshotModel(Base):
         ),
     )
 
-    grid_launch_oid: Mapped[str] = mapped_column(String(36), ForeignKey("grid_launches.oid"), index=True)
     symbol: Mapped[SymbolType]
 
     adx14: Mapped[float]
@@ -45,4 +50,6 @@ class HealthSnapshotModel(Base):
     health_score: Mapped[float] = mapped_column(default=1.0)
 
     # Relationships
+    grid_launch_oid: Mapped[str] = mapped_column(String(36), ForeignKey("grid_launches.oid"), index=True)
+    grid_launch: Mapped["GridLaunchModel"] = relationship(back_populates="health_snapshots")
     alerts: Mapped[list["AlertModel"]] = relationship(back_populates="health_snapshot")
