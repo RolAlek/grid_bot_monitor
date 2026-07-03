@@ -1,10 +1,14 @@
 import dataclasses
+from collections.abc import AsyncGenerator, Generator
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from testcontainers.postgres import PostgresContainer
 
 from source.domain.entities import FundingOiSnapshot, IndicatorSet, LiquidationEstimate, ProposedGridParams
 from source.domain.value_objects import GridType, Symbol, Trend
+from source.infrastructure.database.models.base import Base
 from source.settings import DecisionEngineSettings
 
 
@@ -81,6 +85,32 @@ def base_snapshot() -> FundingOiSnapshot:
         open_interest=5_000_000.0,
         oi_pct_change_7d=5.0,
     )
+
+
+@pytest.fixture(scope="session")
+def postgres_url() -> Generator[str, None, None]:
+    with PostgresContainer("postgres:16-alpine") as postgres:
+        yield postgres.get_connection_url().replace("psycopg2", "asyncpg")
+
+
+@pytest.fixture
+async def db_session(postgres_url: str) -> AsyncGenerator[AsyncSession, None]:
+    engine = create_async_engine(postgres_url, echo=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with async_session() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+    await engine.dispose()
 
 
 @pytest.fixture
