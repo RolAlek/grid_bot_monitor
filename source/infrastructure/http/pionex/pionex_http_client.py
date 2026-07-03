@@ -319,6 +319,9 @@ class PionexHTTPClient(BaseHTTPClient):
         if isinstance(response, ErrorResponse):
             raise HttpRequestError(message=response.message or response.code)
 
+        if not response.result:
+            raise HttpRequestError(message=f"Pionex API returned result=false for cancel {bu_order_id}")
+
         return response.result
 
     @staticmethod
