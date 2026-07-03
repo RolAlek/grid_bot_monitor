@@ -1,48 +1,11 @@
-from enum import StrEnum
 from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-from pydantic.alias_generators import to_camel
+from pydantic import ConfigDict, Field, model_validator
 
 from source.domain.value_objects import GridType, Trend
+from source.infrastructure.http.pionex.models.base import BaseSchema, CamelSchema, CateType, SLTPType, SuccessResponse
 from source.infrastructure.http.pionex.models.types import StringFloat
-
-
-class SLTPType(StrEnum):
-    PRICE = "price"
-    PROFIT_AMOUNT = "profit_amount"
-    PROFIT_RATIO = "profit_ratio"
-    PRICE_LIMIT = "price_limit"
-
-
-class CateType(StrEnum):
-    FULLY_HEDGING = "FULLY_HEDGING"
-    LOAN_GRID = "LOAN_GRID"
-    LEVERAGE_GRID = "LEVERAGE_GRID"
-    FUTURE_GRID_COIN_MARGINED = "FUTURE_GRID_COIN_MARGINED"
-
-
-class BaseSchema(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class CamelSchema(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
-
-
-class BaseResponse(BaseSchema):
-    result: bool
-    timestamp: int
-
-
-class SuccessResponse[TData: BaseModel](BaseResponse):
-    data: TData | None = None
-
-
-class ErrorResponse(BaseResponse):
-    code: str
-    message: str | None = None
 
 
 class DataObject(BaseSchema):
@@ -58,13 +21,11 @@ class DataObject(BaseSchema):
     def validate_top_and_bottom(self) -> Self:
         if float(self.top) <= float(self.bottom):
             raise ValueError("Top must be greater then bottom")
-
         return self
 
 
 class CheckFuturesGridParametersRequestSchema(BaseSchema):
     model_config = ConfigDict(populate_by_name=True)
-
     base: str
     quote: str
     bu_order_data: DataObject = Field(alias="buOrderData")
@@ -86,47 +47,6 @@ class CheckFuturesGridParametersDataObject(CamelSchema):
 
 
 class CheckFuturesGridParametersResponseSchema(SuccessResponse[CheckFuturesGridParametersDataObject]): ...
-
-
-class CandleItem(BaseSchema):
-    time: int
-    open: float
-    close: float
-    high: float
-    low: float
-    volume: float
-
-
-class CandleDataObject(BaseSchema):
-    candles: list[CandleItem] = Field(alias="klines")
-
-
-class GetCandlesResponseSchema(SuccessResponse[CandleDataObject]): ...
-
-
-class RateItem(BaseSchema):
-    funding_rate: float = Field(alias="fundingRate")
-    funding_time: int = Field(alias="fundingTime")
-
-
-class FundingRateObject(BaseSchema):
-    symbol: str
-    rates: list[RateItem]
-
-
-class GetFundingRatesResponseSchema(SuccessResponse[FundingRateObject]): ...
-
-
-class OpenInterestItem(BaseSchema):
-    symbol: str | None = None
-    open_interest: float | None = Field(None, alias="openInterest")
-
-
-class OpenInterestsDataObject(BaseSchema):
-    open_interests: list[OpenInterestItem] = Field(default_factory=list, alias="openInterests")
-
-
-class GetOpenInterestsResponseSchema(SuccessResponse[OpenInterestsDataObject]): ...
 
 
 class BuOrderDataObject(CamelSchema):
@@ -174,12 +94,79 @@ class BuOrderDataObject(CamelSchema):
 class CreateGridBotRequestSchema(CamelSchema):
     base: str = Field(description="Base currency", examples=["BTC", "ETH"])
     quote: str = Field(description="Quote currency", examples=["USDT"])
-
     copy_from: str | None = None
     copy_type: str | None = None
     copy_bot_order_id: str | None = None
-
     bu_order_data: BuOrderDataObject
 
 
 class CreateGridBotResponseSchema(SuccessResponse[BuOrderDataObject]): ...
+
+
+class BotOrderItem(CamelSchema):
+    bu_order_type: str
+    bu_order_id: str
+    base: str
+    quote: str
+    status: str
+    create_time: int
+    close_time: int | None = None
+
+
+class BotOrderListData(CamelSchema):
+    next_page_token: str | None = None
+    previous_page_token: str | None = None
+    results: list[BotOrderItem] = Field(default_factory=list)
+
+
+class BotOrderListResponseSchema(SuccessResponse[BotOrderListData]): ...
+
+
+class FuturesGridOrderDataSchema(CamelSchema):
+    status: str
+    reason_by: str | None = None
+    top: str
+    bottom: str
+    row: int
+    grid_type: str
+    open_price: str | None = None
+    trend: str
+    leverage: int
+    extra_margin: str | None = None
+    quote_investment: str
+    per_volume: str | None = None
+    position: str | None = None
+    position_open_price: str | None = None
+    margin_balance: str | None = None
+    extra_balance: str | None = None
+    liquidation_triggered: bool | None = None
+    liquidation_price: str | None = None
+    estimate_liquidation_price_up: str | None = None
+    estimate_liquidation_price_down: str | None = None
+    loss_stop_type: str | None = None
+    loss_stop: str | None = None
+    profit_stop_type: str | None = None
+    profit_stop: str | None = None
+    risk_status: str = "TRADING"
+    profit_reduce: str | None = None
+    funding_fee_payment: str | None = None
+
+
+class FuturesGridOrderSchema(CamelSchema):
+    bu_order_id: str
+    base: str
+    quote: str
+    status: str
+    create_time: int
+    bu_order_data: FuturesGridOrderDataSchema
+
+
+class FuturesGridOrderResponseSchema(SuccessResponse[FuturesGridOrderSchema]): ...
+
+
+class CancelFuturesGridRequestSchema(CamelSchema):
+    bu_order_id: str
+    close_note: str | None = None
+    close_sell_model: str | None = None
+    immediate: bool | None = None
+    close_slippage: str | None = None

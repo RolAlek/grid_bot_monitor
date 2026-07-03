@@ -23,7 +23,7 @@ from source.domain.exceptions import (
 from source.domain.value_objects import GridLaunchStatus, GridType, Symbol, Trend
 from source.infrastructure.exceptions import HttpRequestError, HttpValidationError
 from source.infrastructure.http.base import BaseHTTPClient
-from source.infrastructure.http.pionex.models.models import (
+from source.infrastructure.http.pionex.models import (
     BuOrderDataObject,
     CheckFuturesGridParametersRequestSchema,
     CheckFuturesGridParametersResponseSchema,
