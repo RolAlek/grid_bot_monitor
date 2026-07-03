@@ -1,4 +1,4 @@
-from dataclasses import asdict
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,9 +30,17 @@ class SQLAlchemyDecisionLogRepository(SQLAlchemyBaseRepository[DecisionVerdict, 
         )
 
     def _as_orm_model(self, data: DecisionVerdict) -> DecisionLog:
+        def _serialize_gate(gate: GateResult) -> dict[str, Any]:
+            return {
+                "gate": gate.gate.value,
+                "status": gate.status.value,
+                "reasons": list(gate.reasons),
+                "raw_values": gate.raw_values,
+            }
+
         return DecisionLog(
             symbol=data.symbol.value,
             action=data.action.value,
-            gates_json=tuple(asdict(gate) for gate in data.gates),
+            gates_json=tuple(_serialize_gate(gate) for gate in data.gates),
             notes=data.notes,
         )
