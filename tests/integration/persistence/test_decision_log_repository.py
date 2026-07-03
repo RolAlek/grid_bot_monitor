@@ -1,17 +1,27 @@
-from collections.abc import AsyncGenerator
-from dataclasses import asdict
 from datetime import timedelta
+from typing import Any
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.domain.entities import GateResult
 from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
-from source.infrastructure.database.models.base import Base
-from source.infrastructure.database.models.models import DecisionLog
+from source.infrastructure.database.models import DecisionLog
 from source.infrastructure.database.repositories.alchemy.decision_repository import SQLAlchemyDecisionLogRepository
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
 from tests.fixtures.factories import FIXED_NOW, make_decision_verdict, make_gate_result
+
+
+def _serialize_gates(gates: tuple[GateResult, ...]) -> tuple[dict[str, Any], ...]:
+    return tuple(
+        {
+            "gate": g.gate.value,
+            "status": g.status.value,
+            "reasons": list(g.reasons),
+            "raw_values": g.raw_values,
+        }
+        for g in gates
+    )
 
 
 def _symbol_filter(symbol: Symbol) -> BaseQueryFilter:
@@ -19,19 +29,6 @@ def _symbol_filter(symbol: Symbol) -> BaseQueryFilter:
         conditions=(BaseFieldCondition(field="symbol", operator=Operator.EQUALS, value=symbol.value),),
         order_by=("-created_at",),
     )
-
-
-@pytest.fixture
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async_session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with async_session_factory() as session:
-        yield session
-
-    await engine.dispose()
 
 
 @pytest.fixture
@@ -105,7 +102,7 @@ async def test_get_last_decision_returns_most_recent_by_created_at(
     older_row = DecisionLog(
         symbol=Symbol.BTC.value,
         action=VerdictAction.HOLD.value,
-        gates_json=tuple(asdict(gate) for gate in older.gates),
+        gates_json=_serialize_gates(older.gates),
         notes="older",
     )
     older_row.created_at = FIXED_NOW - timedelta(days=2)
@@ -114,7 +111,7 @@ async def test_get_last_decision_returns_most_recent_by_created_at(
     newer_row = DecisionLog(
         symbol=Symbol.BTC.value,
         action=VerdictAction.LAUNCH.value,
-        gates_json=tuple(asdict(gate) for gate in newer.gates),
+        gates_json=_serialize_gates(newer.gates),
         notes="newer",
     )
     newer_row.created_at = FIXED_NOW

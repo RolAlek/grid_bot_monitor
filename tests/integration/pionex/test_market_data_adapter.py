@@ -8,7 +8,7 @@ from source.domain.entities import Candle, FundingRate, LiquidationEstimate, Ope
 from source.domain.exceptions import InvalidCandleDataError, InvalidFundingRateDataError, InvalidOpenInterestDataError
 from source.domain.value_objects import GridType, Symbol, Trend
 from source.infrastructure.exceptions import HttpRequestError
-from source.infrastructure.http.pionex.models.models import (
+from source.infrastructure.http.pionex.models import (
     CandleDataObject,
     CandleItem,
     CheckFuturesGridParametersDataObject,
