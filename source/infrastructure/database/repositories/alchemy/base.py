@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from uuid import UUID
 
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +26,7 @@ class SQLAlchemyBaseRepository[ET, MT: DeclarativeBase](AbstractRepository[ET]):
         row = await self._session.scalar(stmt)
         return self._as_entity(row) if row else None
 
-    async def get_by_oid(self, oid: str) -> ET | None:
+    async def get_by_oid(self, oid: UUID) -> ET | None:
         row = await self._session.get(self._model, oid)
 
         return self._as_entity(row) if row else None

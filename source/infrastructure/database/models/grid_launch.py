@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
+from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from source.domain.value_objects import GridLaunchStatus, GridType, HealthStatus, Trend
@@ -68,7 +69,7 @@ class GridLaunchModel(Base):
     status: Mapped[str] = mapped_column(String(16))
     external_id: Mapped[str | None]
 
-    # Monitoring fields (merged from ActiveBotModel)
+    # Monitoring fields (merged from BotModel)
     health_status: Mapped[str] = mapped_column(String(16), default=HealthStatus.GREEN.value)
     distance_to_liquidation_pct: Mapped[float | None]
     grid_fill_ratio: Mapped[float | None]
@@ -77,7 +78,7 @@ class GridLaunchModel(Base):
     auto_adjust_enabled: Mapped[bool] = mapped_column(default=False)
     paused_by_monitor: Mapped[bool] = mapped_column(default=False)
 
-    decision_verdict_oid: Mapped[str] = mapped_column(String(36), ForeignKey("decision_logs.oid"), index=True)
+    decision_verdict_oid: Mapped[UUID] = mapped_column(Uuid, ForeignKey("decision_logs.oid"), index=True)
     decision_verdict: Mapped[DecisionLog] = relationship(back_populates="launched_grid", lazy="joined")
 
     alerts: Mapped[list["AlertModel"]] = relationship(back_populates="grid_launch")

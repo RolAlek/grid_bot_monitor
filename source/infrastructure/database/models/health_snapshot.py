@@ -1,6 +1,7 @@
+import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String
+from sqlalchemy import UUID, CheckConstraint, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from source.domain.value_objects import HealthStatus
@@ -50,6 +51,6 @@ class HealthSnapshotModel(Base):
     health_score: Mapped[float] = mapped_column(default=1.0)
 
     # Relationships
-    grid_launch_oid: Mapped[str] = mapped_column(String(36), ForeignKey("grid_launches.oid"), index=True)
+    grid_launch_oid: Mapped[uuid.UUID] = mapped_column(UUID, ForeignKey("grid_launches.oid"), index=True)
     grid_launch: Mapped["GridLaunchModel"] = relationship(back_populates="health_snapshots")
     alerts: Mapped[list["AlertModel"]] = relationship(back_populates="health_snapshot")

@@ -3,28 +3,27 @@ from typing import Any, cast
 from sqlalchemy import CursorResult, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from source.domain.entities.monitoring import ActiveBot
-from source.domain.value_objects import HealthStatus, Symbol
+from source.domain.entities.monitoring import Bot
+from source.domain.value_objects import GridLaunchStatus, HealthStatus, Symbol
 from source.infrastructure.database.models.grid_launch import GridLaunchModel
 from source.infrastructure.database.repositories.alchemy.base import SQLAlchemyBaseRepository
 
 
-class SQLAlchemyActiveBotRepository(SQLAlchemyBaseRepository[ActiveBot, GridLaunchModel]):
+class SQLAlchemyBotRepository(SQLAlchemyBaseRepository[Bot, GridLaunchModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, GridLaunchModel)
 
-    async def add(self, data: ActiveBot) -> ActiveBot:
+    async def add(self, data: Bot) -> Bot:
         raise NotImplementedError(
-            "ActiveBotRepository.add() is unsafe — it would overwrite grid fields. "
-            "Use update_monitoring_fields() instead."
+            "BotRepository.add() is unsafe — it would overwrite grid fields. Use update_monitoring_fields() instead."
         )
 
-    def _as_entity(self, row: GridLaunchModel) -> ActiveBot:
-        return ActiveBot(
+    def _as_entity(self, row: GridLaunchModel) -> Bot:
+        return Bot(
             oid=row.oid,
             symbol=Symbol(row.symbol),
-            external_bot_id=row.external_id,
-            status=row.status,
+            external_id=row.external_id,
+            status=GridLaunchStatus(row.status),
             health_status=HealthStatus(row.health_status),
             current_pnl=None,  # populated by health-check, not from realized_pnl
             current_pnl_pct=None,
@@ -38,12 +37,12 @@ class SQLAlchemyActiveBotRepository(SQLAlchemyBaseRepository[ActiveBot, GridLaun
             updated_at=row.updated_at,
         )
 
-    def _as_orm_model(self, data: ActiveBot) -> GridLaunchModel:
+    def _as_orm_model(self, data: Bot) -> GridLaunchModel:
         return GridLaunchModel(
             oid=data.oid,
             symbol=data.symbol.value,
-            external_id=data.external_bot_id,
-            status=data.status,
+            external_id=data.external_id,
+            status=data.status.value,
             health_status=data.health_status.value,
             realized_pnl=data.current_pnl,
             distance_to_liquidation_pct=data.distance_to_liquidation_pct,
@@ -54,7 +53,7 @@ class SQLAlchemyActiveBotRepository(SQLAlchemyBaseRepository[ActiveBot, GridLaun
             paused_by_monitor=data.paused_by_monitor,
         )
 
-    async def update_monitoring_fields(self, bot: ActiveBot) -> bool:
+    async def update_monitoring_fields(self, bot: Bot) -> bool:
         stmt = (
             update(self._model)
             .where(self._model.oid == bot.oid)

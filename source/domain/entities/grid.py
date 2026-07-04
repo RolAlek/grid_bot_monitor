@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from datetime import datetime
 
 from source.domain.exceptions import InvalidGridParamsError
-from source.domain.value_objects import GridLaunchStatus, GridType, Symbol, Trend
+from source.domain.value_objects import GridType, Symbol, Trend
 
 
 @dataclass(frozen=True)
@@ -50,25 +49,3 @@ class LiquidationEstimate:
             return (self.proposal.bottom - self.estimate_liquidation_price_down) / self.proposal.grid_range
 
         return None
-
-
-@dataclass
-class Grid:
-    symbol: Symbol
-    top: float
-    bottom: float
-    levels: int
-    trend: Trend
-    grid_type: GridType
-    leverage: int
-    investment: float
-    status: GridLaunchStatus
-    decision_verdict_oid: str
-
-    oid: str | None = None
-    external_id: str | None = None
-    realized_pnl: float | None = None
-    created_at: datetime | None = None
-    closed_at: datetime | None = None
-    stop_loss: float | None = None
-    take_profit: float | None = None
