@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any
+from datetime import UTC, datetime
+from typing import Any, Self
 from uuid import UUID
 
+from source.domain.entities.indicators import IndicatorSet
 from source.domain.value_objects import AlertType, GridLaunchStatus, GridType, HealthStatus, Symbol, Trend
 
 
@@ -68,6 +69,37 @@ class HealthMetricsInput:
 
     funding_rate_annualized_pct: float = 0.0
 
+    @classmethod
+    def build_from(
+        cls,
+        symbol: Symbol,
+        indicators: IndicatorSet,
+        leverage: int,
+        unrealized_pnl: float,
+        fil_ratio: float,
+        distance_to_liq_pct: float,
+        funding_annualized: float,
+        unrealized_pnl_pct: float | None,
+        liq_price: float | None,
+    ) -> Self:
+        return cls(
+            symbol=symbol,
+            last_price=indicators.last_price,
+            leverage=leverage,
+            adx14=indicators.adx14,
+            atr14=indicators.atr14,
+            atr_pct_of_price=indicators.atr_pct_of_price,
+            rsi14=indicators.rsi14,
+            realized_vol_1d=indicators.realized_vol_1d,
+            realized_vol_7d=indicators.realized_vol_7d,
+            unrealized_pnl=unrealized_pnl,
+            unrealized_pnl_pct=unrealized_pnl_pct,
+            grid_fill_ratio=fil_ratio,
+            distance_to_liquidation_pct=distance_to_liq_pct,
+            liquidation_price=liq_price,
+            funding_rate_annualized_pct=funding_annualized,
+        )
+
 
 @dataclass(frozen=True, kw_only=True)
 class HealthSnapshot(HealthMetricsInput):
@@ -82,6 +114,41 @@ class HealthSnapshot(HealthMetricsInput):
     health_status: HealthStatus = HealthStatus.GREEN
     health_score: float = 1.0
     triggered_alerts: tuple[str, ...] = field(default_factory=tuple)
+
+    @classmethod
+    def build_from(  # type: ignore[override]
+        cls,
+        bot: Bot,
+        indicators: IndicatorSet,
+        metrics: HealthMetricsInput,
+        funding_rate: float,
+        classified: "ClassificationResult",
+    ) -> "HealthSnapshot":
+        if bot.oid is None:
+            raise ValueError("Bot must have oid to create HealthSnapshot")
+        return cls(
+            grid_launch_oid=bot.oid,
+            symbol=bot.symbol,
+            created_at=datetime.now(UTC),
+            adx14=indicators.adx14,
+            atr14=indicators.atr14,
+            atr_pct_of_price=indicators.atr_pct_of_price,
+            rsi14=indicators.rsi14,
+            realized_vol_1d=indicators.realized_vol_1d,
+            realized_vol_7d=indicators.realized_vol_7d,
+            last_price=indicators.last_price,
+            unrealized_pnl=metrics.unrealized_pnl,
+            unrealized_pnl_pct=metrics.unrealized_pnl_pct,
+            grid_fill_ratio=metrics.grid_fill_ratio,
+            distance_to_liquidation_pct=metrics.distance_to_liquidation_pct,
+            liquidation_price=metrics.liquidation_price,
+            leverage=metrics.leverage,
+            funding_rate_annualized_pct=metrics.funding_rate_annualized_pct,
+            funding_rate=funding_rate,
+            health_status=classified.status,
+            health_score=classified.score,
+            triggered_alerts=classified.alerts,
+        )
 
 
 @dataclass

@@ -1,16 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Protocol
 
 from source.domain.entities import (
     Candle,
     DecisionVerdict,
     FundingRate,
     GateResult,
-    Grid,
     LiquidationEstimate,
     OpenInterest,
     ProposedGridParams,
 )
+from source.domain.entities.monitoring import Bot, BotOrderSnapshot
 from source.domain.value_objects import GateStatus, Symbol
 
 
@@ -22,7 +21,7 @@ class Notifier(ABC):
     async def send_digest(self, verdict: DecisionVerdict) -> None: ...
 
 
-class MarketDataPort(Protocol):
+class MarketDataPort(ABC):
     @abstractmethod
     async def get_funding_rates(self, symbol: Symbol, limit: int = 1) -> list[FundingRate]: ...
 
@@ -33,9 +32,12 @@ class MarketDataPort(Protocol):
     async def get_candles(self, symbol: Symbol, interval: str, limit: int) -> list[Candle]: ...
 
 
-class GridPort(Protocol):
+class GridPort(ABC):
     @abstractmethod
     async def check_grid_params(self, params: ProposedGridParams) -> LiquidationEstimate: ...
 
     @abstractmethod
-    async def place_grid(self, verdict: DecisionVerdict) -> Grid: ...
+    async def place_grid(self, verdict: DecisionVerdict) -> Bot: ...
+
+    @abstractmethod
+    async def get_futures_grid_order(self, bu_order_id: str) -> BotOrderSnapshot: ...

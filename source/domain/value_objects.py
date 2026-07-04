@@ -1,4 +1,4 @@
-from enum import Enum, IntEnum, StrEnum
+from enum import Enum, IntEnum, StrEnum, nonmember
 
 
 class GateStatus(IntEnum):
@@ -68,6 +68,28 @@ class HealthStatus(StrEnum):
     GREEN = "green"
     YELLOW = "yellow"
     RED = "red"
+
+    _ORDER = nonmember({GREEN: 0, YELLOW: 1, RED: 2})  # type: ignore[valid-type]
+
+    def __gt__(self, other: object) -> bool:
+        if not isinstance(other, HealthStatus):
+            return NotImplemented
+        return self._ORDER[self] > self._ORDER[other]
+
+    def __ge__(self, other: object) -> bool:
+        if not isinstance(other, HealthStatus):
+            return NotImplemented
+        return self._ORDER[self] >= self._ORDER[other]
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, HealthStatus):
+            return NotImplemented
+        return self._ORDER[self] < self._ORDER[other]
+
+    def __le__(self, other: object) -> bool:
+        if not isinstance(other, HealthStatus):
+            return NotImplemented
+        return self._ORDER[self] <= self._ORDER[other]
 
 
 class AlertType(StrEnum):

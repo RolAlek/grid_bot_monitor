@@ -133,23 +133,23 @@ class FuturesGridOrderDataSchema(CamelSchema):
     trend: str
     leverage: int
     extra_margin: str | None = None
-    quote_investment: str
-    per_volume: str | None = None
-    position: str | None = None
+    quote_investment: float | None = None
+    per_volume: float | None = None
+    position: float | None = None
     position_open_price: str | None = None
     margin_balance: str | None = None
     extra_balance: str | None = None
     liquidation_triggered: bool | None = None
     liquidation_price: str | None = None
-    estimate_liquidation_price_up: str | None = None
-    estimate_liquidation_price_down: str | None = None
+    estimate_liquidation_price_up: float | None = None
+    estimate_liquidation_price_down: float | None = None
     loss_stop_type: str | None = None
     loss_stop: str | None = None
     profit_stop_type: str | None = None
     profit_stop: str | None = None
     risk_status: str = "TRADING"
-    profit_reduce: str | None = None
-    funding_fee_payment: str | None = None
+    profit_reduce: float | None = None
+    funding_fee_payment: float | None = None
 
 
 class FuturesGridOrderSchema(CamelSchema):

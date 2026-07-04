@@ -1,3 +1,4 @@
+from enum import StrEnum
 from types import MappingProxyType
 from typing import ClassVar
 
@@ -8,7 +9,12 @@ from source.domain.value_objects import AlertType, HealthStatus, Symbol
 from source.settings import MonitoringSettings
 
 
-logger = structlog.get_logger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+class Direction(StrEnum):
+    HIGHER = "higher_better"
+    LOWER = "lower_better"
 
 
 class HealthClassifier:
@@ -39,51 +45,46 @@ class HealthClassifier:
         self._settings = settings
 
     def classify(self, metrics: HealthMetricsInput) -> ClassificationResult:  # noqa: PLR0914
-        symbol = metrics.symbol
-        overrides = self.THRESHOLD_OVERRIDES.get(symbol, {})
+        overrides = self.THRESHOLD_OVERRIDES.get(metrics.symbol, {})
 
         liq_status, liq_score = self._eval_threshold(
             metrics.distance_to_liquidation_pct,
+            direction=Direction.HIGHER,
             green_min=overrides.get("liq_distance_green_min_pct", self._settings.thresholds.liq_distance_green_min_pct),
             yellow_min=overrides.get(
-                "liq_distance_yellow_min_pct", self._settings.thresholds.liq_distance_yellow_min_pct
+                "liq_distance_yellow_min_pct",
+                self._settings.thresholds.liq_distance_yellow_min_pct,
             ),
-            direction="higher_better",
         )
         pnl_status, pnl_score = self._eval_threshold(
             metrics.unrealized_pnl_pct,
+            direction=Direction.HIGHER,
             green_min=overrides.get("pnl_green_min_pct", self._settings.thresholds.pnl_green_min_pct),
             yellow_min=overrides.get("pnl_yellow_min_pct", self._settings.thresholds.pnl_yellow_min_pct),
-            direction="higher_better",
         )
         fill_status, fill_score = self._eval_threshold(
             metrics.grid_fill_ratio,
+            direction=Direction.LOWER,
             green_max=overrides.get("fill_green_max", self._settings.thresholds.fill_green_max),
             yellow_max=overrides.get("fill_yellow_max", self._settings.thresholds.fill_yellow_max),
-            direction="lower_better",
         )
         vol_status, vol_score = self._eval_threshold(
             metrics.atr_pct_of_price,
+            direction=Direction.LOWER,
             green_max=overrides.get("atr_pct_green_max", self._settings.thresholds.atr_pct_green_max),
             yellow_max=overrides.get("atr_pct_yellow_max", self._settings.thresholds.atr_pct_yellow_max),
-            direction="lower_better",
         )
-        funding_status, funding_score = self._eval_threshold_abs(
-            metrics.funding_rate_annualized_pct,
+        funding_status, funding_score = self._eval_threshold(
+            abs(metrics.funding_rate_annualized_pct),
+            direction=Direction.LOWER,
             green_max=self._settings.thresholds.funding_green_max_abs_pct,
             yellow_max=self._settings.thresholds.funding_yellow_max_abs_pct,
         )
         adx_status, adx_score = self._eval_threshold(
             metrics.adx14,
+            direction=Direction.LOWER,
             green_max=self._settings.thresholds.adx_green_max,
             yellow_max=self._settings.thresholds.adx_yellow_max,
-            direction="lower_better",
-        )
-
-        statuses = [liq_status, pnl_status, fill_status, vol_status, funding_status, adx_status]
-        overall = max(
-            statuses,
-            key=lambda s: (s == HealthStatus.RED, s == HealthStatus.YELLOW, s == HealthStatus.GREEN),
         )
 
         weights = {
@@ -102,10 +103,6 @@ class HealthClassifier:
             "funding": funding_score,
             "adx": adx_score,
         }
-        total_weight = sum(weights.values())
-        overall_score = sum(scores[k] * weights[k] for k in weights) / total_weight
-
-        alerts = self._determine_alerts(liq_status, pnl_status, fill_status, vol_status, funding_status)
 
         details = {
             "liq_distance": {"value": metrics.distance_to_liquidation_pct, "sub_status": liq_status.name},
@@ -117,23 +114,32 @@ class HealthClassifier:
         }
 
         return ClassificationResult(
-            status=overall,
-            score=round(overall_score, 4),
-            alerts=tuple(alerts),
+            status=max((liq_status, pnl_status, fill_status, vol_status, funding_status, adx_status)),
+            score=round(sum(scores[k] * weights[k] for k in weights) / sum(weights.values()), 4),
+            alerts=tuple(self._determine_alerts(liq_status, pnl_status, fill_status, vol_status, funding_status)),
             details=details,
         )
 
-    def _eval_threshold(
+    def _eval_threshold(  # noqa: PLR0911
         self,
-        value: float,
+        value: float | None,
+        direction: Direction,
         green_min: float | None = None,
         yellow_min: float | None = None,
         green_max: float | None = None,
         yellow_max: float | None = None,
-        direction: str = "higher_better",
     ) -> tuple[HealthStatus, float]:
-        if direction == "higher_better":
+        if value is None:
+            logger.info("Classifier: metric value is None — treating as neutral (GREEN, 0.5)")
+            return HealthStatus.GREEN, 0.5
+
+        if direction == Direction.HIGHER:
             if green_min is None or yellow_min is None:
+                logger.critical(
+                    "Classifier misconfiguration — higher_better requires green_min and yellow_min",
+                    green_min=green_min,
+                    yellow_min=yellow_min,
+                )
                 raise ValueError("green_min and yellow_min required for higher_better")
 
             if value >= green_min:
@@ -141,34 +147,66 @@ class HealthClassifier:
 
             if value >= yellow_min:
                 score = (value - yellow_min) / (green_min - yellow_min)
+                logger.warning(
+                    "Metric entered YELLOW zone (higher_better)",
+                    value=round(value, 4),
+                    yellow_min=yellow_min,
+                    green_min=green_min,
+                    score=round(score, 4),
+                )
                 return HealthStatus.YELLOW, max(0.0, min(1.0, score))
 
+            # RED zone
             score = max(0.0, value / yellow_min) * 0.3 if yellow_min else 0.0
+            logger.warning(
+                "Metric in RED zone (higher_better)",
+                value=round(value, 4),
+                yellow_min=yellow_min,
+                red_depth_pct=round(100 * (1 - value / yellow_min) if yellow_min else 100, 1),
+                score=round(score, 4),
+            )
             return HealthStatus.RED, score
 
         if green_max is None or yellow_max is None:
+            logger.critical(
+                "Classifier misconfiguration — lower_better requires green_max and yellow_max",
+                green_max=green_max,
+                yellow_max=yellow_max,
+            )
             raise ValueError("green_max and yellow_max required for lower_better")
+
         if value <= green_max:
             return HealthStatus.GREEN, 1.0
+
         if value <= yellow_max:
             score = 1.0 - (value - green_max) / (yellow_max - green_max)
+            logger.warning(
+                "Metric entered YELLOW zone (lower_better)",
+                value=round(value, 4),
+                green_max=green_max,
+                yellow_max=yellow_max,
+                score=round(score, 4),
+            )
             return HealthStatus.YELLOW, max(0.0, min(1.0, score))
 
         # RED zone: score scales 0.3 → 0.0 proportional to how far past yellow_max
         if yellow_max > 0:
             excess = value - yellow_max
             score = max(0.0, 0.3 * (1.0 - excess / yellow_max))
+            logger.warning(
+                "Metric in RED zone (lower_better)",
+                value=round(value, 4),
+                yellow_max=yellow_max,
+                red_depth_pct=round(100 * excess / yellow_max, 1),
+                score=round(score, 4),
+            )
         else:
             score = 0.0
+            logger.error(
+                "Classifier: yellow_max is zero — cannot compute RED score, defaulting to 0",
+                value=value,
+            )
         return HealthStatus.RED, score
-
-    def _eval_threshold_abs(
-        self,
-        value: float,
-        green_max: float,
-        yellow_max: float,
-    ) -> tuple[HealthStatus, float]:
-        return self._eval_threshold(abs(value), green_max=green_max, yellow_max=yellow_max, direction="lower_better")
 
     @staticmethod
     def _determine_alerts(
