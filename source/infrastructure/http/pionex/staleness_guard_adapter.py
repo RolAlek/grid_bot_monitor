@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 
 from source.application.ports import GridPort
-from source.domain.entities import DecisionVerdict, Grid, LiquidationEstimate, ProposedGridParams
+from source.domain.entities import DecisionVerdict, LiquidationEstimate, ProposedGridParams
+from source.domain.entities.monitoring import Bot, BotOrderSnapshot
 
 
 class StalenessGuardAdapter:
@@ -22,5 +23,8 @@ class StalenessGuardAdapter:
         self._cache[params] = (now, estimate)
         return estimate
 
-    async def place_grid(self, verdict: DecisionVerdict) -> Grid:
+    async def place_grid(self, verdict: DecisionVerdict) -> Bot:
         return await self._delegate.place_grid(verdict)
+
+    async def get_futures_grid_order(self, bu_order_id: str) -> BotOrderSnapshot:
+        return await self._delegate.get_futures_grid_order(bu_order_id)
