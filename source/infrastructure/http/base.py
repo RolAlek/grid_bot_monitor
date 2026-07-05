@@ -1,12 +1,12 @@
 from collections.abc import Sequence
-from http import HTTPMethod
+from http import HTTPMethod, HTTPStatus
 from typing import Any, cast
 
 import structlog
-from httpx import AsyncClient, Auth
+from httpx import AsyncClient, Auth, HTTPStatusError
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from source.infrastructure.exceptions import HttpSerializationError, HttpValidationError
+from source.infrastructure.exceptions import HttpSerializationError, HttpValidationError, http_error_factory
 from source.infrastructure.http.types import HeaderTypes, IncExType, PayloadType, RequestJson, TError, TResponse
 
 
@@ -112,13 +112,22 @@ class BaseHTTPClient:
                 params=params,
                 body=serialized_payload,
             )
-            response = await client.request(
-                method=method,
-                url=path,
-                params=params,
-                headers=headers,
-                json=serialized_payload,
-            )
+            try:
+                response = await client.request(
+                    method=method,
+                    url=path,
+                    params=params,
+                    headers=headers,
+                    json=serialized_payload,
+                )
+                response.raise_for_status()
+            except HTTPStatusError as exc:
+                raise http_error_factory(
+                    message=f"HTTP {exc.response.status_code}: {exc.response.text[:500]}",
+                    status_code=HTTPStatus(exc.response.status_code),
+                    response_content=exc.response.text,
+                    original_error=exc,
+                ) from exc
 
         response_body = await response.aread()
         logger.info(
@@ -128,7 +137,6 @@ class BaseHTTPClient:
             status_code=response.status_code,
             body=response_body.decode(errors="replace"),
         )
-        response.raise_for_status()
 
         return self._validate_response(
             content=response_body,

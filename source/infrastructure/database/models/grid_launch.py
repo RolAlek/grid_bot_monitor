@@ -1,42 +1,19 @@
-from typing import Any
+from datetime import datetime
+from typing import TYPE_CHECKING
+from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, func, text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from source.domain.value_objects import GridLaunchStatus, GridType, Trend, VerdictAction
+from source.domain.value_objects import GridLaunchStatus, GridType, HealthStatus, Trend
 from source.infrastructure.database.models.base import Base
-from source.infrastructure.database.models.types import CreatedAt, JSONType, SymbolType, UpdatedAt
+from source.infrastructure.database.models.decision_log import DecisionLog
+from source.infrastructure.database.models.types import CreatedAt, SymbolType, UpdatedAt
 
 
-class OISnapshot(Base):
-    __tablename__ = "oi_snapshots"
-    __table_args__ = (
-        Index("idx_oi_snapshot_symbol_created_at", "symbol", "created_at"),
-        Index("uq_oi_snapshot_symbol_date", "symbol", func.date(text("created_at")), unique=True),
-    )
-
-    symbol: Mapped[SymbolType]
-    funding_rate_last: Mapped[float]
-    funding_rate_annualized_pct: Mapped[float]
-    open_interest: Mapped[float]
-    oi_pct_change_7d: Mapped[float | None]
-
-
-class DecisionLog(Base):
-    __tablename__ = "decision_logs"
-    __table_args__ = (
-        CheckConstraint(
-            f"action IN ({', '.join(f"'{action.value}'" for action in VerdictAction)})",
-            name="chk_action",
-        ),
-    )
-
-    symbol: Mapped[SymbolType]
-    action: Mapped[str] = mapped_column(String(32))
-    gates_json: Mapped[tuple[dict[str, Any]]] = mapped_column(JSONType)
-    notes: Mapped[str | None]
-
-    launched_grid: Mapped["GridLaunchModel | None"] = relationship(back_populates="decision_verdict", lazy="joined")
+if TYPE_CHECKING:
+    from source.infrastructure.database.models.alert import AlertModel
+    from source.infrastructure.database.models.health_snapshot import HealthSnapshotModel
 
 
 class GridLaunchModel(Base):
@@ -62,11 +39,15 @@ class GridLaunchModel(Base):
             "OR (closed_at IS NOT NULL AND status IN ('closed', 'liquidated'))",
             name="ck_grid_launches_status_closed_at_consistency",
         ),
+        CheckConstraint(
+            f"health_status IN ({', '.join(f"'{s.value}'" for s in HealthStatus)})",
+            name="chk_grid_launches_health_status",
+        ),
         Index(
             "ux_grid_launches_open_per_symbol",
             "symbol",
             unique=True,
-            sqlite_where=text("status IN ('running', 'paused')"),
+            postgresql_where=text("status IN ('running', 'paused')"),
         ),
     )
 
@@ -81,12 +62,24 @@ class GridLaunchModel(Base):
     stop_loss: Mapped[float | None]
     take_profit: Mapped[float | None]
 
-    # Outcome tracking — nullable, populated later, never guessed at write time.
+    # Outcome tracking
     updated_at: Mapped[UpdatedAt]
     closed_at: Mapped[CreatedAt | None]
     realized_pnl: Mapped[float | None]
     status: Mapped[str] = mapped_column(String(16))
     external_id: Mapped[str | None]
 
-    decision_verdict_oid: Mapped[str] = mapped_column(String(36), ForeignKey("decision_logs.oid"), index=True)
+    # Monitoring fields (merged from BotModel)
+    health_status: Mapped[str] = mapped_column(String(16), default=HealthStatus.GREEN.value)
+    distance_to_liquidation_pct: Mapped[float | None]
+    grid_fill_ratio: Mapped[float | None]
+    last_price: Mapped[float | None]
+    last_health_check_at: Mapped[datetime | None]
+    auto_adjust_enabled: Mapped[bool] = mapped_column(default=False)
+    paused_by_monitor: Mapped[bool] = mapped_column(default=False)
+
+    decision_verdict_oid: Mapped[UUID] = mapped_column(Uuid, ForeignKey("decision_logs.oid"), index=True)
     decision_verdict: Mapped[DecisionLog] = relationship(back_populates="launched_grid", lazy="joined")
+
+    alerts: Mapped[list["AlertModel"]] = relationship(back_populates="grid_launch")
+    health_snapshots: Mapped[list["HealthSnapshotModel"]] = relationship(back_populates="grid_launch")

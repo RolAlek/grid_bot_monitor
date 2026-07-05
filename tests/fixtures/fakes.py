@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from uuid import UUID
 
 from source.domain.entities import DecisionVerdict, FundingOiSnapshot
 from source.infrastructure.database.repositories.filters import BaseQueryFilter
@@ -28,7 +29,7 @@ class FakeDecisionLogRepository:
         results = await self.get_list(filters)
         return results[0] if results else None
 
-    async def get_by_oid(self, oid: str) -> DecisionVerdict | None:  # noqa: ARG002
+    async def get_by_oid(self, oid: UUID) -> DecisionVerdict | None:  # noqa: ARG002
         return None
 
     async def add(self, data: DecisionVerdict) -> DecisionVerdict:
@@ -60,7 +61,7 @@ class FakeSnapshotRepository:
         results = await self.get_list(filters)
         return results[0] if results else None
 
-    async def get_by_oid(self, oid: str) -> FundingOiSnapshot | None:  # noqa: ARG002
+    async def get_by_oid(self, oid: UUID) -> FundingOiSnapshot | None:  # noqa: ARG002
         return None
 
     async def add(self, data: FundingOiSnapshot) -> FundingOiSnapshot:

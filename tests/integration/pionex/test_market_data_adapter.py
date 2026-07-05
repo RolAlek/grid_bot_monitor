@@ -1,3 +1,4 @@
+# ruff: noqa: SLF001  # tests mock private _client on adapters
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -8,7 +9,8 @@ from source.domain.entities import Candle, FundingRate, LiquidationEstimate, Ope
 from source.domain.exceptions import InvalidCandleDataError, InvalidFundingRateDataError, InvalidOpenInterestDataError
 from source.domain.value_objects import GridType, Symbol, Trend
 from source.infrastructure.exceptions import HttpRequestError
-from source.infrastructure.http.pionex.models.models import (
+from source.infrastructure.http.pionex.adapters import PionexGridAdapter, PionexMarketDataAdapter
+from source.infrastructure.http.pionex.models import (
     CandleDataObject,
     CandleItem,
     CheckFuturesGridParametersDataObject,
@@ -30,8 +32,13 @@ PIONEX_BASE = "https://api.pionex.com"
 
 
 @pytest.fixture
-def client() -> PionexHTTPClient:
-    return PionexHTTPClient(base_url=PIONEX_BASE)
+def market_adapter() -> PionexMarketDataAdapter:
+    return PionexMarketDataAdapter(PionexHTTPClient(base_url=PIONEX_BASE))
+
+
+@pytest.fixture
+def grid_adapter() -> PionexGridAdapter:
+    return PionexGridAdapter(PionexHTTPClient(base_url=PIONEX_BASE))
 
 
 @pytest.fixture
@@ -51,7 +58,9 @@ def proposal() -> ProposedGridParams:
     )
 
 
-async def test_check_grid_params_returns_estimate(client: PionexHTTPClient, proposal: ProposedGridParams) -> None:
+async def test_check_grid_params_returns_estimate(
+    grid_adapter: PionexGridAdapter, proposal: ProposedGridParams
+) -> None:
     response = CheckFuturesGridParametersResponseSchema(
         result=True,
         timestamp=1000,
@@ -60,15 +69,17 @@ async def test_check_grid_params_returns_estimate(client: PionexHTTPClient, prop
             estimate_liquidation_price_down=80_000.0,
         ),
     )
-    with patch.object(client, "post", new=AsyncMock(return_value=response)):
-        est = await client.check_grid_params(proposal)
+    with patch.object(grid_adapter._client, "post", new=AsyncMock(return_value=response)):
+        est = await grid_adapter.check_grid_params(proposal)
 
     assert isinstance(est, LiquidationEstimate)
     assert est.estimate_liquidation_price_up == pytest.approx(110_000.0)
     assert est.estimate_liquidation_price_down == pytest.approx(80_000.0)
 
 
-async def test_check_grid_params_zero_up_means_no_risk(client: PionexHTTPClient, proposal: ProposedGridParams) -> None:
+async def test_check_grid_params_zero_up_means_no_risk(
+    grid_adapter: PionexGridAdapter, proposal: ProposedGridParams
+) -> None:
     response = CheckFuturesGridParametersResponseSchema(
         result=True,
         timestamp=1000,
@@ -78,21 +89,26 @@ async def test_check_grid_params_zero_up_means_no_risk(client: PionexHTTPClient,
         ),
     )
 
-    with patch.object(client, "post", new=AsyncMock(return_value=response)):
-        est = await client.check_grid_params(proposal)
+    with patch.object(grid_adapter._client, "post", new=AsyncMock(return_value=response)):
+        est = await grid_adapter.check_grid_params(proposal)
 
     assert est.estimate_liquidation_price_up == 0.0
     assert est.buffer_multiplier_up is None
 
 
-async def test_check_grid_params_api_error_raises(client: PionexHTTPClient, proposal: ProposedGridParams) -> None:
+async def test_check_grid_params_api_error_raises(
+    grid_adapter: PionexGridAdapter, proposal: ProposedGridParams
+) -> None:
     response = ErrorResponse(result=False, timestamp=1000, code="E001", message="less than min investment")
 
-    with patch.object(client, "post", new=AsyncMock(return_value=response)), pytest.raises(HttpRequestError):
-        await client.check_grid_params(proposal)
+    with (
+        patch.object(grid_adapter._client, "post", new=AsyncMock(return_value=response)),
+        pytest.raises(HttpRequestError),
+    ):
+        await grid_adapter.check_grid_params(proposal)
 
 
-async def test_get_candles_returns_list(client: PionexHTTPClient) -> None:
+async def test_get_candles_returns_list(market_adapter: PionexMarketDataAdapter) -> None:
     response = GetCandlesResponseSchema(
         result=True,
         timestamp=1000,
@@ -103,8 +119,8 @@ async def test_get_candles_returns_list(client: PionexHTTPClient) -> None:
         ),
     )
 
-    with patch.object(client, "get", new=AsyncMock(return_value=response)):
-        result = await client.get_candles(Symbol.BTC, interval="4H", limit=1)
+    with patch.object(market_adapter._client, "get", new=AsyncMock(return_value=response)):
+        result = await market_adapter.get_candles(Symbol.BTC, interval="4H", limit=1)
 
     assert isinstance(result, list)
     assert len(result) == 1
@@ -112,7 +128,7 @@ async def test_get_candles_returns_list(client: PionexHTTPClient) -> None:
     assert result[0].open == pytest.approx(96_000.0)
 
 
-async def test_get_funding_rates_returns_list(client: PionexHTTPClient) -> None:
+async def test_get_funding_rates_returns_list(market_adapter: PionexMarketDataAdapter) -> None:
     response = GetFundingRatesResponseSchema(
         result=True,
         timestamp=1000,
@@ -125,15 +141,15 @@ async def test_get_funding_rates_returns_list(client: PionexHTTPClient) -> None:
         ),
     )
 
-    with patch.object(client, "get", new=AsyncMock(return_value=response)):
-        result = await client.get_funding_rates(Symbol.BTC, limit=2)
+    with patch.object(market_adapter._client, "get", new=AsyncMock(return_value=response)):
+        result = await market_adapter.get_funding_rates(Symbol.BTC, limit=2)
 
     assert len(result) == 2
     assert isinstance(result[0], FundingRate)
     assert result[0].rate == pytest.approx(0.0001)
 
 
-async def test_get_open_interest_returns_open_interest(client: PionexHTTPClient) -> None:
+async def test_get_open_interest_returns_open_interest(market_adapter: PionexMarketDataAdapter) -> None:
     response = GetOpenInterestsResponseSchema(
         result=True,
         timestamp=1000,
@@ -144,14 +160,14 @@ async def test_get_open_interest_returns_open_interest(client: PionexHTTPClient)
         ),
     )
 
-    with patch.object(client, "get", new=AsyncMock(return_value=response)):
-        result = await client.get_open_interest(Symbol.BTC)
+    with patch.object(market_adapter._client, "get", new=AsyncMock(return_value=response)):
+        result = await market_adapter.get_open_interest(Symbol.BTC)
 
     assert isinstance(result, OpenInterest)
     assert result.open_interest == pytest.approx(500_000_000.0)
 
 
-async def test_get_open_interest_symbol_not_found_raises(client: PionexHTTPClient) -> None:
+async def test_get_open_interest_symbol_not_found_raises(market_adapter: PionexMarketDataAdapter) -> None:
     response = GetOpenInterestsResponseSchema(
         result=True,
         timestamp=1000,
@@ -162,16 +178,19 @@ async def test_get_open_interest_symbol_not_found_raises(client: PionexHTTPClien
         ),
     )
 
-    with patch.object(client, "get", new=AsyncMock(return_value=response)), pytest.raises(InvalidOpenInterestDataError):
-        await client.get_open_interest(Symbol.BTC)
+    with (
+        patch.object(market_adapter._client, "get", new=AsyncMock(return_value=response)),
+        pytest.raises(InvalidOpenInterestDataError),
+    ):
+        await market_adapter.get_open_interest(Symbol.BTC)
 
 
 @respx.mock
-async def test_get_candles_parses_real_response_shape(client: PionexHTTPClient) -> None:
+async def test_get_candles_parses_real_response_shape(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/klines").mock(
         return_value=httpx.Response(200, json=load_fixture("klines_btc_4h.json"))
     )
-    candles = await client.get_candles(Symbol.BTC, interval="4H", limit=200)
+    candles = await market_adapter.get_candles(Symbol.BTC, interval="4H", limit=200)
     assert len(candles) > 0
     assert all(isinstance(c, Candle) for c in candles)
     assert candles[0].time.tzinfo is not None
@@ -180,7 +199,7 @@ async def test_get_candles_parses_real_response_shape(client: PionexHTTPClient) 
 
 
 @respx.mock
-async def test_get_candles_raises_on_result_false(client: PionexHTTPClient) -> None:
+async def test_get_candles_raises_on_result_false(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/klines").mock(
         return_value=httpx.Response(
             200, json={"result": False, "code": "RATE_LIMIT", "message": "rate limited", "timestamp": 0}
@@ -188,51 +207,51 @@ async def test_get_candles_raises_on_result_false(client: PionexHTTPClient) -> N
     )
 
     with pytest.raises((HttpRequestError, InvalidCandleDataError)):
-        await client.get_candles(Symbol.BTC, interval="4H", limit=200)
+        await market_adapter.get_candles(Symbol.BTC, interval="4H", limit=200)
 
 
 @respx.mock
-async def test_get_candles_raises_on_missing_field(client: PionexHTTPClient) -> None:
+async def test_get_candles_raises_on_missing_field(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/klines").mock(
         return_value=httpx.Response(200, json={"result": True, "timestamp": 0, "data": {"klines": [{"time": 123}]}})
     )
 
     with pytest.raises(InvalidCandleDataError):
-        await client.get_candles(Symbol.BTC, interval="4H", limit=200)
+        await market_adapter.get_candles(Symbol.BTC, interval="4H", limit=200)
 
 
 @respx.mock
-async def test_get_candles_empty_list_returns_empty(client: PionexHTTPClient) -> None:
+async def test_get_candles_empty_list_returns_empty(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/klines").mock(
         return_value=httpx.Response(200, json={"result": True, "timestamp": 0, "data": {"klines": []}})
     )
-    result = await client.get_candles(Symbol.BTC, interval="4H", limit=200)
+    result = await market_adapter.get_candles(Symbol.BTC, interval="4H", limit=200)
     assert result == []
 
 
 @respx.mock
-async def test_get_funding_rates_parses_real_response_shape(client: PionexHTTPClient) -> None:
+async def test_get_funding_rates_parses_real_response_shape(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/fundingRates").mock(
         return_value=httpx.Response(200, json=load_fixture("funding_rates_btc.json"))
     )
-    rates = await client.get_funding_rates(Symbol.BTC, limit=20)
+    rates = await market_adapter.get_funding_rates(Symbol.BTC, limit=20)
     assert len(rates) > 0
     assert all(isinstance(r, FundingRate) for r in rates)
     assert rates[0].time.tzinfo is not None
 
 
 @respx.mock
-async def test_get_funding_rates_raises_on_result_false(client: PionexHTTPClient) -> None:
+async def test_get_funding_rates_raises_on_result_false(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/fundingRates").mock(
         return_value=httpx.Response(200, json={"result": False, "code": "ERROR", "message": "fail", "timestamp": 0})
     )
 
     with pytest.raises((HttpRequestError, InvalidFundingRateDataError)):
-        await client.get_funding_rates(Symbol.BTC, limit=20)
+        await market_adapter.get_funding_rates(Symbol.BTC, limit=20)
 
 
 @respx.mock
-async def test_get_funding_rates_raises_on_empty_list(client: PionexHTTPClient) -> None:
+async def test_get_funding_rates_raises_on_empty_list(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/fundingRates").mock(
         return_value=httpx.Response(
             200, json={"result": True, "timestamp": 0, "data": {"symbol": "USDT_BTC_REPR", "rates": []}}
@@ -240,31 +259,31 @@ async def test_get_funding_rates_raises_on_empty_list(client: PionexHTTPClient) 
     )
 
     with pytest.raises(InvalidFundingRateDataError):
-        await client.get_funding_rates(Symbol.BTC, limit=20)
+        await market_adapter.get_funding_rates(Symbol.BTC, limit=20)
 
 
 @respx.mock
-async def test_get_open_interest_parses_real_response_shape(client: PionexHTTPClient) -> None:
+async def test_get_open_interest_parses_real_response_shape(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/openInterests").mock(
         return_value=httpx.Response(200, json=load_fixture("open_interest_btc.json"))
     )
-    oi = await client.get_open_interest(Symbol.BTC)
+    oi = await market_adapter.get_open_interest(Symbol.BTC)
     assert isinstance(oi, OpenInterest)
     assert oi.open_interest > 0
 
 
 @respx.mock
-async def test_get_open_interest_raises_on_result_false(client: PionexHTTPClient) -> None:
+async def test_get_open_interest_raises_on_result_false(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/openInterests").mock(
         return_value=httpx.Response(200, json={"result": False, "code": "ERROR", "message": "fail", "timestamp": 0})
     )
 
     with pytest.raises((HttpRequestError, InvalidOpenInterestDataError)):
-        await client.get_open_interest(Symbol.BTC)
+        await market_adapter.get_open_interest(Symbol.BTC)
 
 
 @respx.mock
-async def test_get_open_interest_raises_when_symbol_not_found(client: PionexHTTPClient) -> None:
+async def test_get_open_interest_raises_when_symbol_not_found(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/openInterests").mock(
         return_value=httpx.Response(
             200,
@@ -277,14 +296,14 @@ async def test_get_open_interest_raises_when_symbol_not_found(client: PionexHTTP
     )
 
     with pytest.raises(InvalidOpenInterestDataError):
-        await client.get_open_interest(Symbol.BTC)
+        await market_adapter.get_open_interest(Symbol.BTC)
 
 
 @respx.mock
-async def test_get_open_interest_raises_on_empty_list(client: PionexHTTPClient) -> None:
+async def test_get_open_interest_raises_on_empty_list(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/openInterests").mock(
         return_value=httpx.Response(200, json={"result": True, "timestamp": 0, "data": {"openInterests": []}})
     )
 
     with pytest.raises(InvalidOpenInterestDataError):
-        await client.get_open_interest(Symbol.BTC)
+        await market_adapter.get_open_interest(Symbol.BTC)

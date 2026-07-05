@@ -4,8 +4,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from pydantic import HttpUrl, SecretStr, field_validator
+from pydantic import BaseModel, Field, HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import URL
 
 
 class LogLevel(StrEnum):
@@ -80,14 +81,78 @@ class DecisionEngineSettings(_BaseSettings):
 
 
 class DatabaseSettings(_BaseSettings):
-    url: str = "sqlite+aiosqlite:///{}.db"
-    name: str = "advisor"
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_user: str = "postgres"
+    db_password: SecretStr
+    db_name: str = "grid_advisor"
 
-    echo: bool = False
+    db_echo: bool = False
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
 
     @property
-    def connection_url(self) -> str:
-        return self.url.format(self.name)
+    def connection_url(self) -> URL:
+        return URL.create(
+            drivername="postgresql+asyncpg",
+            username=self.db_user,
+            password=self.db_password.get_secret_value(),
+            host=self.db_host,
+            port=self.db_port,
+            database=self.db_name,
+        )
+
+
+class MonitoringIntervals(BaseModel):
+    health_check_minutes: int = 30
+    auto_adjust_minutes: int = 30
+    metrics_ttl_days: int = 90
+    alert_debounce_minutes: int = 5
+
+
+class MonitoringWeights(BaseModel):
+    distance_to_liq: float = 0.35
+    pnl: float = 0.20
+    fill_ratio: float = 0.15
+    volatility: float = 0.15
+    funding: float = 0.10
+    adx: float = 0.05
+
+
+class MonitoringThresholds(BaseModel):
+    liq_distance_green_min_pct: float = 15.0
+    liq_distance_yellow_min_pct: float = 7.5
+
+    pnl_green_min_pct: float = -5.0
+    pnl_yellow_min_pct: float = -15.0
+
+    fill_green_max: float = 0.70
+    fill_yellow_max: float = 0.90
+
+    atr_pct_green_max: float = 5.0
+    atr_pct_yellow_max: float = 10.0
+
+    funding_green_max_abs_pct: float = 15.0
+    funding_yellow_max_abs_pct: float = 30.0
+
+    adx_green_max: float = 25.0
+    adx_yellow_max: float = 35.0
+
+    rsi_oversold: float = 30.0
+    rsi_overbought: float = 70.0
+
+
+class MonitoringSettings(_BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="MONITORING_", env_nested_delimiter="__")
+
+    intervals: MonitoringIntervals = Field(default_factory=MonitoringIntervals)
+    weights: MonitoringWeights = Field(default_factory=MonitoringWeights)
+    thresholds: MonitoringThresholds = Field(default_factory=MonitoringThresholds)
+
+    auto_adjust_enabled: bool = False
+    auto_pause_on_red: bool = True
+    auto_resume_on_green: bool = False
+    max_consecutive_yellow_before_action: int = 4
 
 
 class TelegramSettings(_BaseSettings):
@@ -102,6 +167,7 @@ class Settings:
     decision_engine: DecisionEngineSettings = field(default_factory=DecisionEngineSettings)
     database: DatabaseSettings = field(default_factory=DatabaseSettings)
     telegram: TelegramSettings = field(default_factory=TelegramSettings)
+    monitoring: MonitoringSettings = field(default_factory=MonitoringSettings)
 
 
 @lru_cache(maxsize=1, typed=True)

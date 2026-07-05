@@ -6,7 +6,7 @@ from structlog.stdlib import BoundLogger
 from source.domain.entities import FundingOiSnapshot
 from source.domain.exceptions import DuplicateOISnapshotError
 from source.domain.value_objects import Symbol
-from source.infrastructure.database.models.models import OISnapshot
+from source.infrastructure.database.models import OISnapshot
 from source.infrastructure.database.repositories.alchemy.base import SQLAlchemyBaseRepository
 
 

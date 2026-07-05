@@ -1,4 +1,4 @@
-from enum import Enum, IntEnum, StrEnum
+from enum import Enum, IntEnum, StrEnum, nonmember
 
 
 class GateStatus(IntEnum):
@@ -62,3 +62,50 @@ class Symbol(StrEnum):
             return GridType.ARITHMETIC
 
         return GridType.GEOMETRIC
+
+
+class HealthStatus(StrEnum):
+    GREEN = "green"
+    YELLOW = "yellow"
+    RED = "red"
+
+    _ORDER = nonmember({GREEN: 0, YELLOW: 1, RED: 2})  # type: ignore[valid-type]
+
+    def __gt__(self, other: object) -> bool:
+        if not isinstance(other, HealthStatus):
+            return NotImplemented
+        return self._ORDER[self] > self._ORDER[other]
+
+    def __ge__(self, other: object) -> bool:
+        if not isinstance(other, HealthStatus):
+            return NotImplemented
+        return self._ORDER[self] >= self._ORDER[other]
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, HealthStatus):
+            return NotImplemented
+        return self._ORDER[self] < self._ORDER[other]
+
+    def __le__(self, other: object) -> bool:
+        if not isinstance(other, HealthStatus):
+            return NotImplemented
+        return self._ORDER[self] <= self._ORDER[other]
+
+
+class AlertType(StrEnum):
+    STATUS_CHANGE = "status_change"
+    LIQUIDATION_RISK = "liquidation_risk"
+    GRID_DEPLETION = "grid_depletion"
+    HIGH_FUNDING = "high_funding"
+    VOLATILITY_SPIKE = "volatility_spike"
+    PNL_DRAWDOWN = "pnl_drawdown"
+    API_ERROR = "api_error"
+
+
+class ActionType(StrEnum):
+    PAUSE = "pause"
+    RESUME = "resume"
+    CLOSE = "close"
+    RECONFIGURE = "reconfigure"
+    ACKNOWLEDGE = "acknowledge"
+    NONE = "none"
