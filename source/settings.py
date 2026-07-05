@@ -104,7 +104,7 @@ class DatabaseSettings(_BaseSettings):
 
 
 class MonitoringIntervals(BaseModel):
-    health_check_minutes: int = 15
+    health_check_minutes: int = 30
     auto_adjust_minutes: int = 30
     metrics_ttl_days: int = 90
     alert_debounce_minutes: int = 5
