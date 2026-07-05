@@ -261,6 +261,9 @@ class TestSendHealthAlert:
         assert "GREEN" in text
         assert "RED" in text
         assert send_msg.call_args.kwargs["parse_mode"] == "HTML"
+        # Keyboard is built and attached
+        kb = send_msg.call_args.kwargs.get("reply_markup")
+        assert kb is not None
 
     async def test_send_health_alert_includes_triggers_in_text(self) -> None:
         send_msg = AsyncMock()
@@ -275,3 +278,6 @@ class TestSendHealthAlert:
         text: str = send_msg.call_args.kwargs["text"]
         assert "volatility_spike" in text
         assert "grid_depletion" in text
+        # Keyboard is attached
+        kb = send_msg.call_args.kwargs.get("reply_markup")
+        assert kb is not None

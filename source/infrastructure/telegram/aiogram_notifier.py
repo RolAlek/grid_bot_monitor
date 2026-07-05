@@ -7,7 +7,7 @@ from source.domain.entities import DecisionVerdict, GateResult
 from source.domain.entities.monitoring import Bot as DomainBot, ClassificationResult
 from source.domain.value_objects import GateStatus, HealthStatus, VerdictAction
 from source.infrastructure.telegram.formater import TelegramMessageFormatter
-from source.presentation.bot.keyboards.inlines import build_verdict_reaction_kb
+from source.presentation.bot.keyboards.inlines import build_health_kb, build_verdict_reaction_kb
 from source.utils.ensure import ensure
 
 
@@ -39,8 +39,12 @@ class AiogramNotifier(Notifier):
         result: ClassificationResult,
     ) -> None:
         text = self._formatter.format_health_alert(bot, previous_status, result)
-        # Keyboard will be built in Commit 3 (BotActionCD + build_health_kb)
-        await self._send_message(text=text, chat_id=self._chat_id)
+        kb = build_health_kb(
+            status=result.status,
+            symbol=str(bot.symbol),
+            bot_oid=bot.oid.hex if bot.oid else "",
+        )
+        await self._send_message(text=text, chat_id=self._chat_id, keyboard=kb)
 
     async def _send_message(
         self,
