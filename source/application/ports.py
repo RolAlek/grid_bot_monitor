@@ -49,3 +49,6 @@ class GridPort(ABC):
 
     @abstractmethod
     async def get_futures_grid_order(self, bu_order_id: str) -> BotOrderSnapshot: ...
+
+    @abstractmethod
+    async def cancel_futures_grid(self, bu_order_id: str, close_note: str | None = None) -> bool: ...
