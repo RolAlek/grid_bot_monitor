@@ -22,6 +22,9 @@ from source.domain.entities.monitoring import (
 )
 from source.domain.exceptions import BotIntegrityError, BotNotFoundError
 from source.domain.value_objects import AlertType, GridLaunchStatus, HealthStatus, Symbol, Trend
+from source.infrastructure.database.repositories.alchemy.health_snapshot_repository import (
+    SQLAlchemyHealthSnapshotRepository,
+)
 from source.infrastructure.database.repositories.base import AbstractRepository
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
 from source.infrastructure.exceptions import BaseInfrastructureError
@@ -38,7 +41,7 @@ class HealthMonitorService:
         market_data: MarketDataPort,
         classifier: HealthClassifier,
         bot_repo_factory: Callable[[], AbstractAsyncContextManager[AbstractRepository[Bot]]],
-        health_snapshot_repo_factory: Callable[[], AbstractAsyncContextManager[AbstractRepository[HealthSnapshot]]],
+        health_snapshot_repo_factory: Callable[[], AbstractAsyncContextManager[SQLAlchemyHealthSnapshotRepository]],
         alert_service: AlertService | None = None,
     ) -> None:
         self._indicator_service = indicator_service
@@ -245,3 +248,7 @@ class HealthMonitorService:
                     bot_oid=bot.oid,
                     symbol=bot.symbol.value,
                 )
+
+    async def cleanup_old_snapshots(self, ttl_days: int) -> int:
+        async with self._health_snapshot_repo_factory() as repo:
+            return await repo.delete_older_than(ttl_days)
