@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from source.domain.entities.grid import ProposedGridParams
 from source.domain.value_objects import Gate, GateStatus, Symbol, VerdictAction
@@ -20,7 +21,7 @@ class DecisionVerdict:
     action: VerdictAction
     gates: tuple[GateResult, ...]
 
-    oid: str | None = None
+    oid: UUID | None = None
     created_at: datetime | None = None
     notes: str | None = None
 
