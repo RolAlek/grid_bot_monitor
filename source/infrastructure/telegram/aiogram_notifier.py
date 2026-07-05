@@ -4,7 +4,8 @@ from aiogram.types import InlineKeyboardMarkup
 
 from source.application.ports import Notifier
 from source.domain.entities import DecisionVerdict, GateResult
-from source.domain.value_objects import GateStatus, VerdictAction
+from source.domain.entities.monitoring import Bot as DomainBot, ClassificationResult
+from source.domain.value_objects import GateStatus, HealthStatus, VerdictAction
 from source.infrastructure.telegram.formater import TelegramMessageFormatter
 from source.presentation.bot.keyboards.inlines import build_verdict_reaction_kb
 from source.utils.ensure import ensure
@@ -30,6 +31,16 @@ class AiogramNotifier(Notifier):
     async def send_digest(self, verdict: DecisionVerdict) -> None:
         kb = build_verdict_reaction_kb(str(ensure(verdict.oid))) if verdict.action == VerdictAction.LAUNCH else None
         await self._send_message(text=self._formatter.format_digest(verdict), chat_id=self._chat_id, keyboard=kb)
+
+    async def send_health_alert(
+        self,
+        bot: DomainBot,
+        previous_status: HealthStatus,
+        result: ClassificationResult,
+    ) -> None:
+        text = self._formatter.format_health_alert(bot, previous_status, result)
+        # Keyboard will be built in Commit 3 (BotActionCD + build_health_kb)
+        await self._send_message(text=text, chat_id=self._chat_id)
 
     async def _send_message(
         self,

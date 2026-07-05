@@ -9,8 +9,8 @@ from source.domain.entities import (
     OpenInterest,
     ProposedGridParams,
 )
-from source.domain.entities.monitoring import Bot, BotOrderSnapshot
-from source.domain.value_objects import GateStatus, Symbol
+from source.domain.entities.monitoring import Bot, BotOrderSnapshot, ClassificationResult
+from source.domain.value_objects import GateStatus, HealthStatus, Symbol
 
 
 class Notifier(ABC):
@@ -19,6 +19,14 @@ class Notifier(ABC):
 
     @abstractmethod
     async def send_digest(self, verdict: DecisionVerdict) -> None: ...
+
+    @abstractmethod
+    async def send_health_alert(
+        self,
+        bot: Bot,
+        previous_status: HealthStatus,
+        result: ClassificationResult,
+    ) -> None: ...
 
 
 class MarketDataPort(ABC):
