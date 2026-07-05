@@ -7,6 +7,7 @@ from aiogram import Bot
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.application.services.alert_service import AlertService
+from source.application.services.auto_adjust_service import AutoAdjustService
 from source.application.services.bot_management_service import BotManagementService
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.gates.assess_liquidation_safety_third_gate import AssessLiquidationSafetyService
@@ -197,6 +198,17 @@ def get_bot_management_service() -> BotManagementService:
         gate1=get_first_gate_service(),
         gate2=get_second_gate_service(),
         gate3=get_third_gate_service(),
+    )
+
+
+@cache
+def get_auto_adjust_service() -> AutoAdjustService:
+    return AutoAdjustService(
+        settings=get_settings().monitoring,
+        bot_management=get_bot_management_service(),
+        notifier=get_notifier(),
+        bot_repo_factory=get_bot_repo_factory(),
+        health_snapshot_repo_factory=get_health_snapshot_repo_factory(),
     )
 
 

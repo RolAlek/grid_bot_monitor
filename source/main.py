@@ -6,6 +6,7 @@ from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from source.dependencies import (
+    get_auto_adjust_service,
     get_bot_management_service,
     get_daily_runner,
     get_decision_service,
@@ -18,7 +19,7 @@ from source.presentation.bot.handlers.common_handlers import common_router
 from source.presentation.bot.handlers.decision_handlers import decision_router
 from source.presentation.bot.handlers.launch_grid_handlers import grid_router
 from source.presentation.bot.handlers.monitor_handlers import monitor_router
-from source.presentation.scheduler.jobs import register_jobs
+from source.presentation.scheduler.jobs import register_jobs, register_monitor_jobs
 from source.settings import get_settings
 from source.utils.logging_config import configure_logging
 
@@ -51,6 +52,12 @@ async def main() -> None:
 
     scheduler = AsyncIOScheduler()
     register_jobs(scheduler, daily_runner=get_daily_runner(), weekly_runner=get_weekly_runner())
+    register_monitor_jobs(
+        scheduler,
+        monitor_service=get_health_monitor_service(),
+        auto_adjust_service=get_auto_adjust_service(),
+        settings=settings.monitoring,
+    )
     scheduler.start()
 
     await bot.set_my_commands([
