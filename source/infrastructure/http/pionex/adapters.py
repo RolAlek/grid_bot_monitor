@@ -6,7 +6,7 @@ from typing import Any
 import structlog
 from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from source.application.ports import MarketDataPort
+from source.application.ports import GridPort, MarketDataPort
 from source.constants import (
     BOT_ORDERS_LIST_URL,
     CHECK_GRID_URL,
@@ -67,7 +67,7 @@ API_RETRY = retry(
 _API_SEMAPHORE = asyncio.Semaphore(5)
 
 
-class PionexGridAdapter:
+class PionexGridAdapter(GridPort):
     def __init__(self, client: PionexHTTPClient) -> None:
         self._client = client
 

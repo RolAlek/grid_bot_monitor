@@ -5,7 +5,7 @@ from source.domain.entities import DecisionVerdict, LiquidationEstimate, Propose
 from source.domain.entities.monitoring import Bot, BotOrderSnapshot
 
 
-class StalenessGuardAdapter:
+class StalenessGuardAdapter(GridPort):
     def __init__(self, delegate: GridPort, ttl_seconds: int = 120) -> None:
         self._delegate = delegate
         self._ttl = ttl_seconds

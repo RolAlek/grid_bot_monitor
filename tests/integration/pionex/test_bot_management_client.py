@@ -8,6 +8,7 @@ from source.infrastructure.exceptions import (
     RetryableHttpError,
     http_error_factory,
 )
+from source.infrastructure.http.pionex.adapters import PionexGridAdapter
 from source.infrastructure.http.pionex.pionex_http_client import PionexHTTPClient
 
 
@@ -15,12 +16,12 @@ PIONEX_BASE = "https://api.pionex.com"
 
 
 @pytest.fixture
-def client() -> PionexHTTPClient:
-    return PionexHTTPClient(base_url=PIONEX_BASE, timeout=5)
+def adapter() -> PionexGridAdapter:
+    return PionexGridAdapter(PionexHTTPClient(base_url=PIONEX_BASE, timeout=5))
 
 
 class TestGetRunningBots:
-    async def test_returns_list(self, client: PionexHTTPClient, respx_mock: respx.MockRouter) -> None:
+    async def test_returns_list(self, adapter: PionexGridAdapter, respx_mock: respx.MockRouter) -> None:
         respx_mock.get("/api/v1/bot/orders").mock(
             return_value=httpx.Response(
                 200,
@@ -46,11 +47,11 @@ class TestGetRunningBots:
             )
         )
 
-        bots = await client.get_running_bots()
+        bots = await adapter.get_running_bots()
         assert len(bots) == 1
         assert bots[0].bu_order_id == "abc-123"
 
-    async def test_empty_response(self, client: PionexHTTPClient, respx_mock: respx.MockRouter) -> None:
+    async def test_empty_response(self, adapter: PionexGridAdapter, respx_mock: respx.MockRouter) -> None:
         respx_mock.get("/api/v1/bot/orders").mock(
             return_value=httpx.Response(
                 200,
@@ -62,12 +63,12 @@ class TestGetRunningBots:
             )
         )
 
-        bots = await client.get_running_bots()
+        bots = await adapter.get_running_bots()
         assert bots == []
 
 
 class TestGetFuturesGridOrder:
-    async def test_returns_order(self, client: PionexHTTPClient, respx_mock: respx.MockRouter) -> None:
+    async def test_returns_order(self, adapter: PionexGridAdapter, respx_mock: respx.MockRouter) -> None:
         respx_mock.get("/api/v1/bot/orders/futuresGrid/order").mock(
             return_value=httpx.Response(
                 200,
@@ -95,21 +96,21 @@ class TestGetFuturesGridOrder:
             )
         )
 
-        order = await client.get_futures_grid_order("bot-456")
-        assert order.bu_order_id == "bot-456"
-        assert order.bu_order_data.grid_type == "geometric"
+        order = await adapter.get_futures_grid_order("bot-456")
+        assert order.leverage == 2
+        assert order.trend == "long"
 
 
 class TestCancelFuturesGrid:
-    async def test_success(self, client: PionexHTTPClient, respx_mock: respx.MockRouter) -> None:
+    async def test_success(self, adapter: PionexGridAdapter, respx_mock: respx.MockRouter) -> None:
         respx_mock.post("/api/v1/bot/orders/futuresGrid/cancel").mock(
             return_value=httpx.Response(200, json={"result": True, "timestamp": 1700000000000})
         )
 
-        result = await client.cancel_futures_grid("bot-123", close_note="test")
+        result = await adapter.cancel_futures_grid("bot-123", close_note="test")
         assert result is True
 
-    async def test_api_error(self, client: PionexHTTPClient, respx_mock: respx.MockRouter) -> None:
+    async def test_api_error(self, adapter: PionexGridAdapter, respx_mock: respx.MockRouter) -> None:
         respx_mock.post("/api/v1/bot/orders/futuresGrid/cancel").mock(
             return_value=httpx.Response(
                 200,
@@ -118,11 +119,11 @@ class TestCancelFuturesGrid:
         )
 
         with pytest.raises(HttpRequestError, match="result=false"):
-            await client.cancel_futures_grid("bot-999")
+            await adapter.cancel_futures_grid("bot-999")
 
 
 class TestRetryBehaviour:
-    async def test_retry_on_429(self, client: PionexHTTPClient, respx_mock: respx.MockRouter) -> None:
+    async def test_retry_on_429(self, adapter: PionexGridAdapter, respx_mock: respx.MockRouter) -> None:
         calls: list[int] = []
 
         def handler(request: httpx.Request) -> httpx.Response:  # noqa: ARG001
@@ -141,11 +142,11 @@ class TestRetryBehaviour:
 
         respx_mock.get("/api/v1/bot/orders").mock(side_effect=handler)
 
-        bots = await client.get_running_bots()
+        bots = await adapter.get_running_bots()
         assert bots == []
         assert len(calls) == 3  # 2 failures + 1 success
 
-    async def test_no_retry_on_400(self, client: PionexHTTPClient, respx_mock: respx.MockRouter) -> None:
+    async def test_no_retry_on_400(self, adapter: PionexGridAdapter, respx_mock: respx.MockRouter) -> None:
         calls: list[int] = []
 
         def handler(request: httpx.Request) -> httpx.Response:  # noqa: ARG001
@@ -155,14 +156,14 @@ class TestRetryBehaviour:
         respx_mock.get("/api/v1/bot/orders").mock(side_effect=handler)
 
         with pytest.raises(HttpRequestError):
-            await client.get_running_bots()
+            await adapter.get_running_bots()
         assert len(calls) == 1  # только одна попытка, без повторов
 
-    async def test_no_retry_on_401(self, client: PionexHTTPClient, respx_mock: respx.MockRouter) -> None:
+    async def test_no_retry_on_401(self, adapter: PionexGridAdapter, respx_mock: respx.MockRouter) -> None:
         respx_mock.get("/api/v1/bot/orders").mock(return_value=httpx.Response(401))
 
         with pytest.raises(HttpRequestError):
-            await client.get_running_bots()
+            await adapter.get_running_bots()
 
 
 class TestHttpErrorFactory:

@@ -28,7 +28,7 @@ class AiogramNotifier(Notifier):
         await self._send_message(text=self._formatter.format_alert(result, prev_status), chat_id=self._chat_id)
 
     async def send_digest(self, verdict: DecisionVerdict) -> None:
-        kb = build_verdict_reaction_kb(ensure(verdict.oid)) if verdict.action == VerdictAction.LAUNCH else None
+        kb = build_verdict_reaction_kb(str(ensure(verdict.oid))) if verdict.action == VerdictAction.LAUNCH else None
         await self._send_message(text=self._formatter.format_digest(verdict), chat_id=self._chat_id, keyboard=kb)
 
     async def _send_message(

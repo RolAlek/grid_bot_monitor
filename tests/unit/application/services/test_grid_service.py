@@ -1,25 +1,30 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
+from uuid import UUID
 
 import pytest
 
 from source.application.services.grid_service import GridBotService
-from source.domain.entities import DecisionVerdict, Grid
+from source.domain.entities import DecisionVerdict
+from source.domain.entities.monitoring import Bot
 from source.domain.exceptions import DecisionNotFoundError
 from source.domain.value_objects import GateStatus, GridLaunchStatus, GridType, Symbol, Trend, VerdictAction
 from source.infrastructure.database.repositories.filters import BaseQueryFilter
 from tests.fixtures.factories import make_gate_result, make_proposed_grid_params
 
 
+FIXED_OID = UUID("00000000-0000-0000-0000-000000000001")
+
+
 class FakeLaunchedGridRepository:
     def __init__(self) -> None:
-        self._storage: dict[str, Grid] = {}
+        self._storage: dict[UUID, Bot] = {}
 
-    async def get_list(self, filters: BaseQueryFilter | None = None) -> list[Grid]:  # noqa: ARG002
+    async def get_list(self, filters: BaseQueryFilter | None = None) -> list[Bot]:  # noqa: ARG002
         return list(self._storage.values())
 
-    async def get_one(self, filters: BaseQueryFilter) -> Grid | None:
+    async def get_one(self, filters: BaseQueryFilter) -> Bot | None:
         for grid in self._storage.values():
             match = True
             for condition in filters.conditions:
@@ -31,19 +36,19 @@ class FakeLaunchedGridRepository:
                 return grid
         return None
 
-    async def get_by_oid(self, oid: str) -> Grid | None:
+    async def get_by_oid(self, oid: UUID) -> Bot | None:
         return self._storage.get(oid)
 
-    async def add(self, data: Grid) -> Grid:
+    async def add(self, data: Bot) -> Bot:
         if data.oid is None:
-            data.oid = f"fake-oid-{len(self._storage)}"
+            data.oid = UUID(f"00000000-0000-0000-0000-{len(self._storage):012d}")
         self._storage[data.oid] = data
         return data
 
 
 class FakeDecisionLogRepoWithOid:
     def __init__(self) -> None:
-        self._storage: dict[str, DecisionVerdict] = {}
+        self._storage: dict[UUID, DecisionVerdict] = {}
 
     async def get_list(self, filters: BaseQueryFilter | None = None) -> list[DecisionVerdict]:  # noqa: ARG002
         return list(self._storage.values())
@@ -51,11 +56,11 @@ class FakeDecisionLogRepoWithOid:
     async def get_one(self, filters: BaseQueryFilter) -> DecisionVerdict | None:  # noqa: ARG002
         return next(iter(self._storage.values()), None)
 
-    async def get_by_oid(self, oid: str) -> DecisionVerdict | None:
+    async def get_by_oid(self, oid: UUID) -> DecisionVerdict | None:
         return self._storage.get(oid)
 
     async def add(self, data: DecisionVerdict) -> DecisionVerdict:
-        key = data.oid or str(len(self._storage))
+        key = data.oid or UUID(f"00000000-0000-0000-0000-{len(self._storage):012d}")
         self._storage[key] = data
         return data
 
@@ -65,7 +70,7 @@ def _make_verdict(**overrides: object) -> DecisionVerdict:
         "symbol": Symbol.BTC,
         "action": VerdictAction.LAUNCH,
         "gates": (make_gate_result(status=GateStatus.PASS),),
-        "oid": "vdct-001",
+        "oid": FIXED_OID,
         "notes": None,
         "suggested_parameters": make_proposed_grid_params(leverage=1, trend=Trend.NEUTRAL),
     }
@@ -89,7 +94,7 @@ def _make_service(
         yield decision_repo
 
     return GridBotService(
-        provider_launch_grid_repository=grid_provider,  # type: ignore[arg-type]
+        provider_bot_repository=grid_provider,  # type: ignore[arg-type]
         provider_decision_log_repository=decision_provider,  # type: ignore[arg-type]
         grid_port=grid_port or AsyncMock(),
     )
@@ -98,7 +103,7 @@ def _make_service(
 async def test_persist_grid_saves_and_returns_grid_with_oid() -> None:
     grid_repo = FakeLaunchedGridRepository()
     service = _make_service(grid_repo=grid_repo)
-    grid = Grid(
+    grid = Bot(
         symbol=Symbol.BTC,
         top=100_000.0,
         bottom=88_000.0,
@@ -108,7 +113,7 @@ async def test_persist_grid_saves_and_returns_grid_with_oid() -> None:
         leverage=1,
         investment=1_000.0,
         status=GridLaunchStatus.RUNNING,
-        decision_verdict_oid="vdct-001",
+        decision_verdict_oid=FIXED_OID,
     )
 
     result = await service.persist_grid(grid)
@@ -122,7 +127,7 @@ async def test_persist_grid_saves_and_returns_grid_with_oid() -> None:
 
 async def test_get_grid_when_matching_grid_exists_returns_it() -> None:
     grid_repo = FakeLaunchedGridRepository()
-    grid = Grid(
+    grid = Bot(
         symbol=Symbol.BTC,
         top=100_000.0,
         bottom=88_000.0,
@@ -132,7 +137,7 @@ async def test_get_grid_when_matching_grid_exists_returns_it() -> None:
         leverage=1,
         investment=1_000.0,
         status=GridLaunchStatus.RUNNING,
-        decision_verdict_oid="vdct-001",
+        decision_verdict_oid=FIXED_OID,
     )
     await grid_repo.add(grid)
     service = _make_service(grid_repo=grid_repo)
@@ -153,11 +158,11 @@ async def test_get_grid_when_no_matching_grid_returns_none() -> None:
 
 
 async def test_launch_grid_with_api_calls_exchange_and_persists() -> None:
-    verdict = _make_verdict(oid="vdct-001")
+    verdict = _make_verdict(oid=FIXED_OID)
     decision_repo = FakeDecisionLogRepoWithOid()
     await decision_repo.add(verdict)
 
-    grid_from_api = Grid(
+    grid_from_api = Bot(
         symbol=Symbol.BTC,
         top=100_000.0,
         bottom=88_000.0,
@@ -167,7 +172,7 @@ async def test_launch_grid_with_api_calls_exchange_and_persists() -> None:
         leverage=1,
         investment=1_000.0,
         status=GridLaunchStatus.RUNNING,
-        decision_verdict_oid="vdct-001",
+        decision_verdict_oid=FIXED_OID,
         oid="grid-ext-1",
     )
 
@@ -177,7 +182,7 @@ async def test_launch_grid_with_api_calls_exchange_and_persists() -> None:
     grid_repo = FakeLaunchedGridRepository()
     service = _make_service(grid_repo=grid_repo, decision_repo=decision_repo, grid_port=grid_port)
 
-    result = await service.launch_grid_with_api("vdct-001")
+    result = await service.launch_grid_with_api(FIXED_OID)
 
     grid_port.place_grid.assert_called_once_with(verdict)
     assert result is grid_from_api
@@ -201,27 +206,27 @@ async def test_launch_grid_manual_persists_grid_from_verdict_params() -> None:
         trend=Trend.NEUTRAL,
         quote_investment=1_000.0,
     )
-    verdict = _make_verdict(oid="vdct-001", suggested_parameters=params)
+    verdict = _make_verdict(oid=FIXED_OID, suggested_parameters=params)
     decision_repo = FakeDecisionLogRepoWithOid()
     await decision_repo.add(verdict)
 
     grid_repo = FakeLaunchedGridRepository()
     service = _make_service(grid_repo=grid_repo, decision_repo=decision_repo)
 
-    result = await service.launch_grid_manual("vdct-001")
+    result = await service.launch_grid_manual(FIXED_OID)
 
     assert result.symbol == Symbol.BTC
     assert result.top == 100_000.0
     assert result.bottom == 88_000.0
     assert result.status == GridLaunchStatus.RUNNING
-    assert result.decision_verdict_oid == "vdct-001"
+    assert result.decision_verdict_oid == FIXED_OID
 
 
 async def test_launch_grid_manual_when_verdict_missing_params_raises() -> None:
-    verdict = _make_verdict(oid="vdct-001", suggested_parameters=None)
+    verdict = _make_verdict(oid=FIXED_OID, suggested_parameters=None)
     decision_repo = FakeDecisionLogRepoWithOid()
     await decision_repo.add(verdict)
     service = _make_service(decision_repo=decision_repo)
 
-    with pytest.raises(DecisionNotFoundError, match="vdct-001"):
-        await service.launch_grid_manual("vdct-001")
+    with pytest.raises(DecisionNotFoundError, match=str(FIXED_OID)):
+        await service.launch_grid_manual(FIXED_OID)

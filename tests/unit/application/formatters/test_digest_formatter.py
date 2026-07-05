@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock
+from uuid import UUID
 
 import pytest
 
@@ -56,7 +57,7 @@ async def test_launch_verdict_includes_confirm_prompt(
 ) -> None:
     verdict = make_decision_verdict(
         action=VerdictAction.LAUNCH,
-        oid="vdct-001",
+        oid=UUID("00000000-0000-0000-0000-000000000001"),
         suggested_parameters=make_proposed_grid_params(top=100_000.0, bottom=88_000.0, leverage=3),
         gates=(make_gate_result(Gate.REGIME_RANGE_FIT, GateStatus.PASS),),
     )
