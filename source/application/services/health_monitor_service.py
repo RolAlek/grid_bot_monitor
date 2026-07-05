@@ -2,13 +2,13 @@ import asyncio
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from datetime import UTC, datetime
-from typing import Any
 from uuid import UUID
 
 import structlog
 from httpx import ConnectError, NetworkError, RemoteProtocolError, TimeoutException
 
 from source.application.ports import GridPort, MarketDataPort
+from source.application.services.alert_service import AlertService
 from source.application.services.health_classifier import HealthClassifier
 from source.application.services.indicator_service import IndicatorService
 from source.constants import FUNDING_ANNUALIZATION_FACTOR
@@ -39,7 +39,7 @@ class HealthMonitorService:
         classifier: HealthClassifier,
         bot_repo_factory: Callable[[], AbstractAsyncContextManager[AbstractRepository[Bot]]],
         health_snapshot_repo_factory: Callable[[], AbstractAsyncContextManager[AbstractRepository[HealthSnapshot]]],
-        alert_service: Any | None = None,
+        alert_service: AlertService | None = None,
     ) -> None:
         self._indicator_service = indicator_service
         self._grid_port = grid_port
@@ -131,6 +131,9 @@ class HealthMonitorService:
                 alerts=(*result.alerts, AlertType.STATUS_CHANGE),
                 details=result.details,
             )
+
+        if self._alert_service is not None:
+            await self._alert_service.send_health_alert(bot, previous_status, result)
 
         await self._create_snapshot(bot, indicators, derived, funding_rate, result)
 

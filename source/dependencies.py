@@ -6,6 +6,8 @@ from typing import Any
 from aiogram import Bot
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from source.application.services.alert_service import AlertService
+from source.application.services.bot_management_service import BotManagementService
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.gates.assess_liquidation_safety_third_gate import AssessLiquidationSafetyService
 from source.application.services.gates.assess_market_regime_first_gate import AssessMarketRegimeService
@@ -19,10 +21,9 @@ from source.application.services.oi_snapshot_service import OISnapshotService
 from source.application.services.run_daily_positioning_check import RunDailyPositioningCheck
 from source.application.services.run_weekly_full_assessment import RunWeeklyFullAssessment
 from source.infrastructure.database.engine import async_session_factory
+from source.infrastructure.database.repositories.alchemy.alert_repository import SQLAlchemyAlertRepository
 from source.infrastructure.database.repositories.alchemy.base import SQLAlchemyBaseRepository
-from source.infrastructure.database.repositories.alchemy.bot_repository import (
-    SQLAlchemyBotRepository,
-)
+from source.infrastructure.database.repositories.alchemy.bot_repository import SQLAlchemyBotRepository
 from source.infrastructure.database.repositories.alchemy.decision_repository import SQLAlchemyDecisionLogRepository
 from source.infrastructure.database.repositories.alchemy.health_snapshot_repository import (
     SQLAlchemyHealthSnapshotRepository,
@@ -83,6 +84,15 @@ def get_grid_adapter() -> PionexGridAdapter:
 @cache
 def get_market_data_adapter() -> PionexMarketDataAdapter:
     return PionexMarketDataAdapter(client=get_pionex_client())
+
+
+@cache
+def get_indicator_service() -> IndicatorService:
+    settings = get_settings()
+    return IndicatorService(
+        settings=settings.pionex,
+        market_data=get_market_data_adapter(),
+    )
 
 
 @cache
@@ -167,6 +177,30 @@ def get_weekly_runner() -> RunWeeklyFullAssessment:
 
 
 @cache
+def get_alert_service() -> AlertService:
+    settings = get_settings()
+    return AlertService(
+        notifier=get_notifier(),
+        alert_repo_factory=create_service_provider_dependency(SQLAlchemyAlertRepository),
+        monitoring_settings=settings.monitoring,
+    )
+
+
+@cache
+def get_bot_management_service() -> BotManagementService:
+    settings = get_settings()
+    return BotManagementService(
+        grid_port=get_grid_adapter(),
+        active_bot_repo_factory=get_bot_repo_factory(),
+        indicator_service=get_indicator_service(),
+        grid_builder=GridProposalBuilder(settings.decision_engine),
+        gate1=get_first_gate_service(),
+        gate2=get_second_gate_service(),
+        gate3=get_third_gate_service(),
+    )
+
+
+@cache
 def get_health_classifier() -> HealthClassifier:
     return HealthClassifier(settings=get_settings().monitoring)
 
@@ -184,14 +218,11 @@ def get_health_snapshot_repo_factory() -> Callable[[], AbstractAsyncContextManag
 @cache
 def get_health_monitor_service() -> HealthMonitorService:
     return HealthMonitorService(
-        indicator_service=IndicatorService(
-            settings=get_settings().pionex,
-            market_data=get_market_data_adapter(),
-        ),
+        indicator_service=get_indicator_service(),
         grid_port=get_grid_adapter(),
         market_data=get_market_data_adapter(),
         classifier=get_health_classifier(),
         bot_repo_factory=get_bot_repo_factory(),
         health_snapshot_repo_factory=get_health_snapshot_repo_factory(),
-        alert_service=None,
+        alert_service=get_alert_service(),
     )

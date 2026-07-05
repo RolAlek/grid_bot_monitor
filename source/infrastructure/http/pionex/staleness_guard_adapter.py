@@ -28,3 +28,6 @@ class StalenessGuardAdapter(GridPort):
 
     async def get_futures_grid_order(self, bu_order_id: str) -> BotOrderSnapshot:
         return await self._delegate.get_futures_grid_order(bu_order_id)
+
+    async def cancel_futures_grid(self, bu_order_id: str, close_note: str | None = None) -> bool:
+        return await self._delegate.cancel_futures_grid(bu_order_id, close_note=close_note)
