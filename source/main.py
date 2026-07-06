@@ -1,17 +1,16 @@
 import asyncio
 
 import structlog
-from aiogram import Dispatcher
+from aiogram import Bot as TelegramBot, Dispatcher
 from aiogram.types import BotCommand
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from source.dependencies import (
-    get_auto_adjust_service,
     get_bot_management_service,
     get_daily_runner,
     get_decision_service,
     get_health_monitor_service,
     get_launch_service,
+    get_scheduler,
     get_telegram_bot,
     get_weekly_runner,
 )
@@ -19,7 +18,9 @@ from source.presentation.bot.handlers.common_handlers import common_router
 from source.presentation.bot.handlers.decision_handlers import decision_router
 from source.presentation.bot.handlers.launch_grid_handlers import grid_router
 from source.presentation.bot.handlers.monitor_handlers import monitor_router
-from source.presentation.scheduler.jobs import register_jobs, register_monitor_jobs
+from source.presentation.scheduler.jobs import register_jobs
+from source.presentation.scheduler.jobs.lifecycle import schedule_bot_monitoring, unschedule_bot_monitoring
+from source.presentation.scheduler.jobs.monitor import register_cleanup_job
 from source.settings import get_settings
 from source.utils.logging_config import configure_logging
 
@@ -31,7 +32,7 @@ async def main() -> None:
     settings = get_settings()
     configure_logging(settings.app)
 
-    bot = get_telegram_bot()
+    bot: TelegramBot = get_telegram_bot()
     dp = Dispatcher()
     dp.include_router(common_router())
     dp.include_router(
@@ -50,15 +51,24 @@ async def main() -> None:
         )
     )
 
-    scheduler = AsyncIOScheduler()
+    scheduler = get_scheduler()
     register_jobs(scheduler, daily_runner=get_daily_runner(), weekly_runner=get_weekly_runner())
-    register_monitor_jobs(
+    register_cleanup_job(
         scheduler,
         monitor_service=get_health_monitor_service(),
-        auto_adjust_service=get_auto_adjust_service(),
         settings=settings.monitoring,
     )
+    # Wire per-symbol job lifecycle callbacks
+    get_launch_service().set_on_launch(schedule_bot_monitoring)
+    get_bot_management_service().set_on_close(unschedule_bot_monitoring)
     scheduler.start()
+
+    # Recover per-symbol monitoring jobs for bots active before restart
+    active_bots = await get_health_monitor_service().get_active_bots()
+    for active in active_bots:
+        schedule_bot_monitoring(active.symbol)
+    if active_bots:
+        logger.info("Recovered monitoring jobs", count=len(active_bots))
 
     await bot.set_my_commands([
         BotCommand(command="status", description="Show bot health status"),
