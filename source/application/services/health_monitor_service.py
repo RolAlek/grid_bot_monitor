@@ -74,6 +74,12 @@ class HealthMonitorService:
             return None
         return await self._check_single_bot(bot)
 
+    async def get_active_bots(self) -> list[Bot]:
+        try:
+            return await self._pull_active_bots()
+        except BotNotFoundError:
+            return []
+
     async def _pull_active_bots(self) -> list[Bot]:
         filters = BaseQueryFilter((
             BaseFieldCondition(

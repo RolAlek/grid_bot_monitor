@@ -1,7 +1,7 @@
 import asyncio
 
 import structlog
-from aiogram import Dispatcher
+from aiogram import Bot as TelegramBot, Dispatcher
 from aiogram.types import BotCommand
 
 from source.dependencies import (
@@ -32,7 +32,7 @@ async def main() -> None:
     settings = get_settings()
     configure_logging(settings.app)
 
-    bot = get_telegram_bot()
+    bot: TelegramBot = get_telegram_bot()
     dp = Dispatcher()
     dp.include_router(common_router())
     dp.include_router(
@@ -59,11 +59,16 @@ async def main() -> None:
         settings=settings.monitoring,
     )
     # Wire per-symbol job lifecycle callbacks
-    launch_svc = get_launch_service()
-    launch_svc._on_launch = schedule_bot_monitoring  # noqa: SLF001
-    mgmt_svc = get_bot_management_service()
-    mgmt_svc._on_close = unschedule_bot_monitoring  # noqa: SLF001
+    get_launch_service().set_on_launch(schedule_bot_monitoring)
+    get_bot_management_service().set_on_close(unschedule_bot_monitoring)
     scheduler.start()
+
+    # Recover per-symbol monitoring jobs for bots active before restart
+    active_bots = await get_health_monitor_service().get_active_bots()
+    for active in active_bots:
+        schedule_bot_monitoring(active.symbol)
+    if active_bots:
+        logger.info("Recovered monitoring jobs", count=len(active_bots))
 
     await bot.set_my_commands([
         BotCommand(command="status", description="Show bot health status"),

@@ -201,10 +201,7 @@ def monitor_router(  # noqa: C901, PLR0915
         await message.reply(text, parse_mode="HTML")
 
     async def _get_active_bots() -> list[Bot]:
-        try:
-            return await monitor_service._pull_active_bots()  # noqa: SLF001
-        except Exception:
-            return []
+        return await monitor_service.get_active_bots()
 
     async def _get_latest_snapshot(bot: Bot) -> HealthSnapshot | None:
         if bot.oid is None:

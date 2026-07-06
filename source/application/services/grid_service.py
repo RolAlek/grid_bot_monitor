@@ -26,6 +26,9 @@ class GridBotService:
         self._grid_port = grid_port
         self._on_launch = on_launch
 
+    def set_on_launch(self, callback: Callable[[Symbol], None]) -> None:
+        self._on_launch = callback
+
     async def get_grid(self, symbol: Symbol, status: GridLaunchStatus) -> Bot | None:
         filters = BaseQueryFilter(
             conditions=(

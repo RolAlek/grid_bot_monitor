@@ -42,6 +42,9 @@ class BotManagementService:
         self._gate3 = gate3
         self._on_close = on_close
 
+    def set_on_close(self, callback: Callable[[Symbol], None]) -> None:
+        self._on_close = callback
+
     async def pause_bot(self, symbol: Symbol) -> bool:
         bot = await self._find_by_statuses(symbol, [GridLaunchStatus.RUNNING])
         if bot is None:
