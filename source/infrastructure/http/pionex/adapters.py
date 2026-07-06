@@ -1,4 +1,5 @@
 import asyncio
+import time
 from datetime import UTC, datetime
 from logging import WARNING
 from typing import Any
@@ -257,8 +258,11 @@ class PionexGridAdapter(GridPort):
 
 
 class PionexMarketDataAdapter(MarketDataPort):
+    _OI_CACHE_TTL: float = 60.0  # seconds — one batch of symbols completes in << 60s
+
     def __init__(self, client: PionexHTTPClient) -> None:
         self._client = client
+        self._oi_cache: tuple[float, dict[Symbol, OpenInterest]] | None = None
 
     @API_RETRY
     async def get_candles(self, symbol: Symbol, interval: str, limit: int) -> list[Candle]:
@@ -316,6 +320,12 @@ class PionexMarketDataAdapter(MarketDataPort):
 
     @API_RETRY
     async def get_open_interest(self, symbol: Symbol) -> OpenInterest:
+        now = time.monotonic()
+        if self._oi_cache and (now - self._oi_cache[0]) < self._OI_CACHE_TTL:
+            cached = self._oi_cache[1].get(symbol)
+            if cached is not None:
+                return cached
+
         async with _API_SEMAPHORE:
             response = await self._client.get(
                 path="/api/v1/market/openInterests",
@@ -329,13 +339,20 @@ class PionexMarketDataAdapter(MarketDataPort):
         if not response.data or not response.data.open_interests:
             raise InvalidOpenInterestDataError("Empty open interest data response from Pionex")
 
+        parsed: dict[Symbol, OpenInterest] = {}
         for oi in response.data.open_interests:
-            if oi.symbol == symbol.value:
-                if not oi.open_interest:
-                    raise InvalidOpenInterestDataError("Empty open interest value from Pionex response")
-                return OpenInterest(
-                    symbol=Symbol(oi.symbol) if oi.symbol else symbol,
+            if not oi.open_interest:
+                continue
+            try:
+                parsed[symbol] = OpenInterest(
+                    symbol=Symbol(oi.symbol or ""),
                     open_interest=oi.open_interest,
                 )
+            except ValueError:
+                continue
+        self._oi_cache = (now, parsed)
 
-        raise InvalidOpenInterestDataError(f"No data matching the {symbol.value}")
+        if (result := parsed.get(symbol)) is None:
+            raise InvalidOpenInterestDataError(f"No data matching the {symbol.value}")
+
+        return result
