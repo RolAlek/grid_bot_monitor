@@ -19,10 +19,12 @@ class GridBotService:
             [], AbstractAsyncContextManager[AbstractRepository[DecisionVerdict]]
         ],
         grid_port: GridPort,
+        on_launch: Callable[[Symbol], None] | None = None,
     ) -> None:
         self._provider_bot_repository = provider_bot_repository
         self._provider_decision_log_repository = provider_decision_log_repository
         self._grid_port = grid_port
+        self._on_launch = on_launch
 
     async def get_grid(self, symbol: Symbol, status: GridLaunchStatus) -> Bot | None:
         filters = BaseQueryFilter(
@@ -46,8 +48,11 @@ class GridBotService:
             raise DecisionNotFoundError(f"Decision with {verdict_oid} does not exist")
 
         api_result = await self._grid_port.place_grid(verdict)
+        bot = await self.persist_grid(api_result)
 
-        return await self.persist_grid(api_result)
+        if self._on_launch is not None:
+            self._on_launch(verdict.symbol)
+        return bot
 
     async def launch_grid_manual(self, verdict_oid: UUID) -> Bot:
         async with self._provider_decision_log_repository() as repository:
@@ -56,7 +61,7 @@ class GridBotService:
         if not verdict or not verdict.suggested_parameters or not verdict.oid:
             raise DecisionNotFoundError(f"Decision with {verdict_oid} does not exist")
 
-        return await self.persist_grid(
+        bot = await self.persist_grid(
             Bot(
                 symbol=verdict.symbol,
                 top=verdict.suggested_parameters.top,
@@ -72,3 +77,7 @@ class GridBotService:
                 take_profit=verdict.suggested_parameters.take_profit,
             )
         )
+
+        if self._on_launch is not None:
+            self._on_launch(verdict.symbol)
+        return bot

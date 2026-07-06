@@ -3,15 +3,14 @@ import asyncio
 import structlog
 from aiogram import Dispatcher
 from aiogram.types import BotCommand
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from source.dependencies import (
-    get_auto_adjust_service,
     get_bot_management_service,
     get_daily_runner,
     get_decision_service,
     get_health_monitor_service,
     get_launch_service,
+    get_scheduler,
     get_telegram_bot,
     get_weekly_runner,
 )
@@ -19,7 +18,9 @@ from source.presentation.bot.handlers.common_handlers import common_router
 from source.presentation.bot.handlers.decision_handlers import decision_router
 from source.presentation.bot.handlers.launch_grid_handlers import grid_router
 from source.presentation.bot.handlers.monitor_handlers import monitor_router
-from source.presentation.scheduler.jobs import register_jobs, register_monitor_jobs
+from source.presentation.scheduler.jobs import register_jobs
+from source.presentation.scheduler.jobs.lifecycle import schedule_bot_monitoring, unschedule_bot_monitoring
+from source.presentation.scheduler.jobs.monitor import register_cleanup_job
 from source.settings import get_settings
 from source.utils.logging_config import configure_logging
 
@@ -50,14 +51,18 @@ async def main() -> None:
         )
     )
 
-    scheduler = AsyncIOScheduler()
+    scheduler = get_scheduler()
     register_jobs(scheduler, daily_runner=get_daily_runner(), weekly_runner=get_weekly_runner())
-    register_monitor_jobs(
+    register_cleanup_job(
         scheduler,
         monitor_service=get_health_monitor_service(),
-        auto_adjust_service=get_auto_adjust_service(),
         settings=settings.monitoring,
     )
+    # Wire per-symbol job lifecycle callbacks
+    launch_svc = get_launch_service()
+    launch_svc._on_launch = schedule_bot_monitoring  # noqa: SLF001
+    mgmt_svc = get_bot_management_service()
+    mgmt_svc._on_close = unschedule_bot_monitoring  # noqa: SLF001
     scheduler.start()
 
     await bot.set_my_commands([

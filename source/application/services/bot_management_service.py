@@ -22,8 +22,6 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 class BotManagementService:
-    """Unified bot management: local pause/resume, API close, gate-based reconfigure."""
-
     def __init__(
         self,
         grid_port: GridPort,
@@ -33,6 +31,7 @@ class BotManagementService:
         gate1: AssessMarketRegimeService,
         gate2: AssessPositioningService,
         gate3: AssessLiquidationSafetyService,
+        on_close: Callable[[Symbol], None] | None = None,
     ) -> None:
         self._grid_port = grid_port
         self._active_bot_repo_factory = active_bot_repo_factory
@@ -41,6 +40,7 @@ class BotManagementService:
         self._gate1 = gate1
         self._gate2 = gate2
         self._gate3 = gate3
+        self._on_close = on_close
 
     async def pause_bot(self, symbol: Symbol) -> bool:
         bot = await self._find_by_statuses(symbol, [GridLaunchStatus.RUNNING])
@@ -78,6 +78,10 @@ class BotManagementService:
         bot.closed_at = datetime.now(UTC)
         await self._save(bot)
         logger.info("Bot closed via API", symbol=symbol.value, bot_oid=str(bot.oid), reason=reason)
+
+        if self._on_close is not None:
+            self._on_close(symbol)
+
         return True
 
     async def reconfigure_bot(self, symbol: Symbol) -> ProposedGridParams | None:
