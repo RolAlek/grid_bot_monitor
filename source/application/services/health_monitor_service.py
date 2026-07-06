@@ -67,23 +67,47 @@ class HealthMonitorService:
         logger.info("Health check cycle complete", total=len(bots), success=len(outputs))
         return outputs
 
+    async def check_single_bot_by_symbol(self, symbol: Symbol) -> ClassificationResult | None:
+        bot = await self._pull_active_bot(symbol)
+
+        if bot is None:
+            return None
+        return await self._check_single_bot(bot)
+
     async def _pull_active_bots(self) -> list[Bot]:
-        active_filter = BaseQueryFilter(
-            conditions=(
-                BaseFieldCondition(
-                    "status",
-                    Operator.IN,
-                    (GridLaunchStatus.RUNNING.value, GridLaunchStatus.PAUSED.value),
-                ),
+        filters = BaseQueryFilter((
+            BaseFieldCondition(
+                "status",
+                Operator.IN,
+                (GridLaunchStatus.RUNNING.value, GridLaunchStatus.PAUSED.value),
             ),
-        )
+        ))
         async with self._bot_repo_factory() as repo:
-            bots = await repo.get_list(active_filter)
+            bots = await repo.get_list(filters)
 
         if not bots:
             raise BotNotFoundError("No running or paused bots found for check")
 
         return bots
+
+    async def _pull_active_bot(self, symbol: Symbol | None = None) -> Bot | None:
+        conditions: list[BaseFieldCondition] = [
+            BaseFieldCondition(
+                "status",
+                Operator.IN,
+                (GridLaunchStatus.RUNNING.value, GridLaunchStatus.PAUSED.value),
+            ),
+        ]
+        if symbol is not None:
+            conditions.append(BaseFieldCondition("symbol", Operator.EQUALS, symbol.value))
+
+        async with self._bot_repo_factory() as repo:
+            bot = await repo.get_one(BaseQueryFilter(conditions=tuple(conditions)))
+
+        if not bot:
+            raise BotNotFoundError(f"No running or paused bots found for {symbol}")
+
+        return bot
 
     async def _check_single_bot(self, bot: Bot) -> ClassificationResult:
 

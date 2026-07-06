@@ -8,7 +8,7 @@ from source.application.ports import Notifier
 from source.application.services.bot_management_service import BotManagementService
 from source.domain.entities.monitoring import Bot, ClassificationResult, HealthSnapshot
 from source.domain.exceptions import BotNotFoundError
-from source.domain.value_objects import ActionType, HealthStatus
+from source.domain.value_objects import ActionType, HealthStatus, Symbol
 from source.infrastructure.database.repositories.base import AbstractRepository
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
 from source.settings import MonitoringSettings
@@ -56,6 +56,19 @@ class AutoAdjustService:
 
         logger.info("Auto-adjust cycle complete", total=len(bots), actions=len(actions))
         return actions
+
+    async def evaluate_one(self, symbol: Symbol) -> ActionType:
+        criteria = BaseQueryFilter(
+            conditions=(BaseFieldCondition(field="symbol", operator=Operator.EQUALS, value=symbol.value),)
+        )
+        async with self._bot_repo_factory() as repo:
+            bot = await repo.get_one(criteria)
+
+        if not bot:
+            logger.debug("Auto-adjust skipped — bot not found", symbol=symbol.value)
+            return ActionType.NONE
+
+        return await self.evaluate_and_act(bot)
 
     async def _handle_red(self, bot: Bot) -> ActionType:
         try:

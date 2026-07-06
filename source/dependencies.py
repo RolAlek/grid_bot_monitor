@@ -4,6 +4,7 @@ from functools import cache
 from typing import Any
 
 from aiogram import Bot
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.application.services.alert_service import AlertService
@@ -42,6 +43,11 @@ from source.settings import get_settings
 def get_telegram_bot() -> Bot:
     settings = get_settings()
     return Bot(token=settings.telegram.token.get_secret_value())
+
+
+@cache
+def get_scheduler() -> AsyncIOScheduler:  # type: ignore[no-any-unimported]
+    return AsyncIOScheduler()
 
 
 @cache
