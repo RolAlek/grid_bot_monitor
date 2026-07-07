@@ -6,7 +6,11 @@ import pytest
 import respx
 
 from source.domain.entities import Candle, FundingRate, LiquidationEstimate, OpenInterest, ProposedGridParams
-from source.domain.exceptions import InvalidCandleDataError, InvalidFundingRateDataError, InvalidOpenInterestDataError
+from source.domain.exceptions import (
+    CandleDataUnavailableError,
+    FundingRateDataUnavailableError,
+    OpenInterestDataUnavailableError,
+)
 from source.domain.value_objects import GridType, Symbol, Trend
 from source.infrastructure.exceptions import HttpRequestError
 from source.infrastructure.http.pionex.adapters import PionexGridAdapter, PionexMarketDataAdapter
@@ -180,7 +184,7 @@ async def test_get_open_interest_symbol_not_found_raises(market_adapter: PionexM
 
     with (
         patch.object(market_adapter._client, "get", new=AsyncMock(return_value=response)),
-        pytest.raises(InvalidOpenInterestDataError),
+        pytest.raises(OpenInterestDataUnavailableError),
     ):
         await market_adapter.get_open_interest(Symbol.BTC)
 
@@ -206,7 +210,7 @@ async def test_get_candles_raises_on_result_false(market_adapter: PionexMarketDa
         )
     )
 
-    with pytest.raises((HttpRequestError, InvalidCandleDataError)):
+    with pytest.raises((HttpRequestError, CandleDataUnavailableError)):
         await market_adapter.get_candles(Symbol.BTC, interval="4H", limit=200)
 
 
@@ -216,17 +220,17 @@ async def test_get_candles_raises_on_missing_field(market_adapter: PionexMarketD
         return_value=httpx.Response(200, json={"result": True, "timestamp": 0, "data": {"klines": [{"time": 123}]}})
     )
 
-    with pytest.raises(InvalidCandleDataError):
+    with pytest.raises(CandleDataUnavailableError):
         await market_adapter.get_candles(Symbol.BTC, interval="4H", limit=200)
 
 
 @respx.mock
-async def test_get_candles_empty_list_returns_empty(market_adapter: PionexMarketDataAdapter) -> None:
+async def test_get_candles_empty_list_raises(market_adapter: PionexMarketDataAdapter) -> None:
     respx.get(f"{PIONEX_BASE}/api/v1/market/klines").mock(
         return_value=httpx.Response(200, json={"result": True, "timestamp": 0, "data": {"klines": []}})
     )
-    result = await market_adapter.get_candles(Symbol.BTC, interval="4H", limit=200)
-    assert result == []
+    with pytest.raises(CandleDataUnavailableError):
+        await market_adapter.get_candles(Symbol.BTC, interval="4H", limit=200)
 
 
 @respx.mock
@@ -246,7 +250,7 @@ async def test_get_funding_rates_raises_on_result_false(market_adapter: PionexMa
         return_value=httpx.Response(200, json={"result": False, "code": "ERROR", "message": "fail", "timestamp": 0})
     )
 
-    with pytest.raises((HttpRequestError, InvalidFundingRateDataError)):
+    with pytest.raises((HttpRequestError, FundingRateDataUnavailableError)):
         await market_adapter.get_funding_rates(Symbol.BTC, limit=20)
 
 
@@ -258,7 +262,7 @@ async def test_get_funding_rates_raises_on_empty_list(market_adapter: PionexMark
         )
     )
 
-    with pytest.raises(InvalidFundingRateDataError):
+    with pytest.raises(FundingRateDataUnavailableError):
         await market_adapter.get_funding_rates(Symbol.BTC, limit=20)
 
 
@@ -278,7 +282,7 @@ async def test_get_open_interest_raises_on_result_false(market_adapter: PionexMa
         return_value=httpx.Response(200, json={"result": False, "code": "ERROR", "message": "fail", "timestamp": 0})
     )
 
-    with pytest.raises((HttpRequestError, InvalidOpenInterestDataError)):
+    with pytest.raises((HttpRequestError, OpenInterestDataUnavailableError)):
         await market_adapter.get_open_interest(Symbol.BTC)
 
 
@@ -295,7 +299,7 @@ async def test_get_open_interest_raises_when_symbol_not_found(market_adapter: Pi
         )
     )
 
-    with pytest.raises(InvalidOpenInterestDataError):
+    with pytest.raises(OpenInterestDataUnavailableError):
         await market_adapter.get_open_interest(Symbol.BTC)
 
 
@@ -305,5 +309,5 @@ async def test_get_open_interest_raises_on_empty_list(market_adapter: PionexMark
         return_value=httpx.Response(200, json={"result": True, "timestamp": 0, "data": {"openInterests": []}})
     )
 
-    with pytest.raises(InvalidOpenInterestDataError):
+    with pytest.raises(OpenInterestDataUnavailableError):
         await market_adapter.get_open_interest(Symbol.BTC)
