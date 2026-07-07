@@ -61,7 +61,10 @@ class AiogramNotifier(Notifier):
             )
         except Exception as error:
             logger.exception("Failed to send message", error=error, chat_id=chat_id)
-            await self._bot.send_message(
-                chat_id=chat_id,
-                text=f"Failed to send message: {error}",
-            )
+            try:
+                await self._bot.send_message(
+                    chat_id=chat_id,
+                    text="⚠️ Failed to send message. Please try again later.",
+                )
+            except Exception:
+                logger.exception("Even the fallback message could not be delivered")

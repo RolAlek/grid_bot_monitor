@@ -25,11 +25,12 @@ from source.domain.entities import (
 )
 from source.domain.entities.monitoring import Bot, BotOrderSnapshot
 from source.domain.exceptions import (
-    InvalidCandleDataError,
-    InvalidFundingRateDataError,
+    CandleDataUnavailableError,
+    FundingRateDataUnavailableError,
+    GridOrderDataUnavailableError,
     InvalidGridParamsError,
-    InvalidLiquidationEstimateDataError,
-    InvalidOpenInterestDataError,
+    LiquidationEstimateDataUnavailableError,
+    OpenInterestDataUnavailableError,
 )
 from source.domain.value_objects import GridLaunchStatus, GridType, Symbol, Trend
 from source.infrastructure.exceptions import HttpRequestError, HttpValidationError, RetryableHttpError
@@ -86,7 +87,7 @@ class PionexGridAdapter(GridPort):
             raise HttpRequestError(message=response.message or response.code)
 
         if not response.result or not response.data:
-            raise InvalidCandleDataError(f"Empty response for futures grid order {bu_order_id}")
+            raise GridOrderDataUnavailableError(f"Empty response for futures grid order {bu_order_id}")
 
         data = response.data.bu_order_data
         return BotOrderSnapshot(
@@ -133,7 +134,7 @@ class PionexGridAdapter(GridPort):
             raise HttpRequestError(message=response.message or response.code)
 
         if not response.result or not response.data:
-            raise InvalidLiquidationEstimateDataError("Invalid check grid parameters response from Pionex.")
+            raise LiquidationEstimateDataUnavailableError("Invalid check grid parameters response from Pionex.")
 
         data = response.data
         return LiquidationEstimate(
@@ -182,7 +183,7 @@ class PionexGridAdapter(GridPort):
             raise HttpRequestError(message=response.message or response.code)
 
         if not response.result or not response.data:
-            raise InvalidLiquidationEstimateDataError("Invalid create grid response from Pionex.")
+            raise LiquidationEstimateDataUnavailableError("Invalid create grid response from Pionex.")
 
         return Bot(
             symbol=params.symbol,
@@ -275,13 +276,15 @@ class PionexMarketDataAdapter(MarketDataPort):
                     params={"symbol": symbol, "interval": interval, "limit": limit},
                 )
             except HttpValidationError as error:
-                raise InvalidCandleDataError(f"Malformed candle data from Pionex: {error}", error) from error
+                raise CandleDataUnavailableError(
+                    f"Malformed candle data from Pionex: {error}", original_error=error
+                ) from error
 
         if isinstance(response, ErrorResponse):
             raise HttpRequestError(message=response.message or response.code)
 
         if not response.data:
-            raise InvalidCandleDataError("Empty candles response from Pionex")
+            raise CandleDataUnavailableError("Empty candles response from Pionex")
 
         return [
             Candle(
@@ -305,13 +308,15 @@ class PionexMarketDataAdapter(MarketDataPort):
                     params={"symbol": symbol, "limit": limit},
                 )
             except HttpValidationError as error:
-                raise InvalidFundingRateDataError(f"Malformed funding rate data from Pionex: {error}", error) from error
+                raise FundingRateDataUnavailableError(
+                    f"Malformed funding rate data from Pionex: {error}", original_error=error
+                ) from error
 
         if isinstance(response, ErrorResponse):
             raise HttpRequestError(message=response.message or response.code)
 
         if not response.data or not response.data.rates:
-            raise InvalidFundingRateDataError("Empty funding rates response from Pionex")
+            raise FundingRateDataUnavailableError("Empty funding rates response from Pionex")
 
         return [
             FundingRate(rate=rate.funding_rate, time=datetime.fromtimestamp(rate.funding_time / 1_000, UTC))
@@ -337,22 +342,28 @@ class PionexMarketDataAdapter(MarketDataPort):
             raise HttpRequestError(message=response.message or response.code)
 
         if not response.data or not response.data.open_interests:
-            raise InvalidOpenInterestDataError("Empty open interest data response from Pionex")
+            raise OpenInterestDataUnavailableError("Empty open interest data response from Pionex")
 
         parsed: dict[Symbol, OpenInterest] = {}
         for oi in response.data.open_interests:
             if not oi.open_interest:
                 continue
             try:
-                parsed[symbol] = OpenInterest(
-                    symbol=Symbol(oi.symbol or ""),
-                    open_interest=oi.open_interest,
-                )
+                parsed_key = Symbol(oi.symbol) if oi.symbol else None
             except ValueError:
+                logger.warning("Unknown symbol in OI response", raw_symbol=oi.symbol)
                 continue
+
+            if parsed_key is None:
+                continue
+
+            parsed[parsed_key] = OpenInterest(
+                symbol=parsed_key,
+                open_interest=oi.open_interest,
+            )
         self._oi_cache = (now, parsed)
 
         if (result := parsed.get(symbol)) is None:
-            raise InvalidOpenInterestDataError(f"No data matching the {symbol.value}")
+            raise OpenInterestDataUnavailableError(f"No data matching the {symbol.value}")
 
         return result

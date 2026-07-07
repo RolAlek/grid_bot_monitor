@@ -19,21 +19,17 @@ def grid_router(grid_launch_service: GridBotService) -> Router:
     async def handle_auto_launch_callback(callback_query: CallbackQuery, callback_data: ApplyDecisionCD) -> None:
         await callback_query.answer(text="Auto launch submitted", show_alert=True)
 
-        try:
-            grid = await grid_launch_service.launch_grid_with_api(UUID(callback_data.verdict_id))
+        grid = await grid_launch_service.launch_grid_with_api(UUID(callback_data.verdict_id))
 
-            await callback_query.message.edit_text(text=f"✅ Grid launched successfully\n{grid}")  # type: ignore[union-attr]
+        await callback_query.message.edit_text(text=f"✅ Grid launched successfully\n{grid}")  # type: ignore[union-attr]
 
-            logger.info(
-                "Bot launched automatically",
-                verdict_id=callback_data.verdict_id,
-                bot_id=grid.oid,
-                symbol=grid.symbol.value,
-                user_id=callback_query.from_user.id,
-            )
-        except Exception as exc:
-            logger.exception("Failed to launch bot", verdict_id=callback_data.verdict_id, error=str(exc))
-            await callback_query.message.edit_text(text=f"⚠️ Error launching the grid: {exc}")  # type: ignore[union-attr]
+        logger.info(
+            "Bot launched automatically",
+            verdict_id=callback_data.verdict_id,
+            bot_id=grid.oid,
+            symbol=grid.symbol.value,
+            user_id=callback_query.from_user.id,
+        )
 
     @router.callback_query(ApplyDecisionCD.filter(F.mode == "manual"))
     async def handle_launch_manual(callback: CallbackQuery, callback_data: ApplyDecisionCD) -> None:

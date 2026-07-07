@@ -5,7 +5,7 @@ from uuid import UUID
 from source.application.ports import GridPort
 from source.domain.entities import DecisionVerdict
 from source.domain.entities.monitoring import Bot
-from source.domain.exceptions import DecisionNotFoundError
+from source.domain.exceptions import BotIntegrityError, DecisionNotFoundError
 from source.domain.value_objects import GridLaunchStatus, Symbol
 from source.infrastructure.database.repositories.base import AbstractRepository
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
@@ -51,6 +51,10 @@ class GridBotService:
             raise DecisionNotFoundError(f"Decision with {verdict_oid} does not exist")
 
         api_result = await self._grid_port.place_grid(verdict)
+
+        if not api_result.external_id:
+            raise BotIntegrityError("Bot created without external_id from Pionex API")
+
         bot = await self.persist_grid(api_result)
 
         if self._on_launch is not None:

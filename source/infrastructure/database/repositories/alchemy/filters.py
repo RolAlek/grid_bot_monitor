@@ -6,6 +6,7 @@ from sqlalchemy.orm import DeclarativeBase, InstrumentedAttribute
 from sqlalchemy.sql import Select
 
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter
+from source.infrastructure.exceptions import UnsupportedFilterOperatorError
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +34,7 @@ class SQLAlchemyFieldCondition(BaseFieldCondition):
             case "icontains":
                 expr = column.ilike(f"%{self.value}%")
             case _:
-                raise AssertionError(f"unreachable operator: {self.operator!r}")
+                raise UnsupportedFilterOperatorError(f"Unsupported filter operator: {self.operator!r}")
 
         return cast(ColumnElement[bool], expr)
 

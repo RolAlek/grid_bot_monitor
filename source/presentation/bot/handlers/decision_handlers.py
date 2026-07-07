@@ -30,13 +30,13 @@ def decision_router(  # noqa: C901
         )
         await message.reply("Running full assessment — this may take a few seconds...")
 
-        try:
-            async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
-                for symbol in Symbol:
+        async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
+            for symbol in Symbol:
+                try:
                     await weekly_runner.run(symbol)
-        except Exception:
-            logger.exception("Full assessment was failed")
-            await message.answer("Assessment failed — check logs for details.")
+                except Exception:
+                    logger.exception("Weekly assessment failed for symbol", symbol=symbol.value)
+        await message.answer("Full assessment complete.")
 
     @router.message(Command("daily_assessment"))
     async def handle_daily(message: Message) -> None:
@@ -45,13 +45,13 @@ def decision_router(  # noqa: C901
             user_id=message.from_user.id if message.from_user else "unknown",
         )
         await message.answer("Running daily assessment — this may take a few seconds...")
-        try:
-            async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
-                for symbol in Symbol:
+        async with ChatActionSender.typing(bot=message.bot, chat_id=message.chat.id):  # type: ignore[arg-type]
+            for symbol in Symbol:
+                try:
                     await daily_runner.run(symbol)
-        except Exception:
-            logger.exception("Daily assessment was failed")
-            await message.answer("Daily assessment failed — check logs")
+                except Exception:
+                    logger.exception("Daily assessment failed for symbol", symbol=symbol.value)
+        await message.answer("Daily assessment complete.")
 
     @router.message(Command("verdict"))
     async def handle_verdict(message: Message) -> None:

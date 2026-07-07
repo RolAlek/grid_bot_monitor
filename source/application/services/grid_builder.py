@@ -1,6 +1,7 @@
 from typing import ClassVar
 
 from source.domain.entities import IndicatorSet, ProposedGridParams
+from source.domain.exceptions import InvalidGridParamsError
 from source.domain.value_objects import Symbol, Trend
 from source.settings import DecisionEngineSettings
 
@@ -73,6 +74,10 @@ class GridProposalBuilder:
     ) -> tuple[float | None, float | None]:
         stop_buffer = self.STOP_LOSS_BUFFER.get(symbol, 1.5) * indicators.atr14
         take_buffer = self._settings.take_profit_buffer_atr * indicators.atr14
+
+        if indicators.last_price <= 0:
+            raise InvalidGridParamsError(f"Last price must be positive, got {indicators.last_price}")
+
         min_distance = (0.005 if symbol == Symbol.XAUT else 0.01) * indicators.last_price
 
         stop_loss, take_profit = None, None

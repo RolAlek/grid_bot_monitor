@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 import structlog
 
+from source.application.exceptions import AssessmentFailedError
 from source.application.ports import Notifier
 from source.application.services.decision_log_service import DecisionLogService
 from source.application.services.gates.assess_liquidation_safety_third_gate import AssessLiquidationSafetyService
@@ -69,6 +70,9 @@ class RunWeeklyFullAssessment:
         proposal: ProposedGridParams | None = None,
     ) -> DecisionVerdict:
         action = VerdictAction.LAUNCH
+
+        if action != VerdictAction.HOLD and proposal is None:
+            raise AssessmentFailedError("Proposal must not be None for non-HOLD verdict")
 
         if any(gate.status == GateStatus.FAIL for gate in gates):
             action = VerdictAction.HOLD

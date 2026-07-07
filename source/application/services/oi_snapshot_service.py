@@ -11,6 +11,7 @@ from source.domain.exceptions import DuplicateOISnapshotError
 from source.domain.value_objects import Symbol
 from source.infrastructure.database.repositories.base import AbstractRepository
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
+from source.utils.error_logging import log_and_raise
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -31,9 +32,8 @@ class OISnapshotService:
         try:
             async with self._provider_oi_snapshot_repository() as repository:
                 return await repository.add(snapshot)
-        except Exception:
-            logger.exception("Failed to persist OI snapshot", symbol=snapshot.symbol.value)
-            raise
+        except Exception as exc:
+            log_and_raise(logger, exc, symbol=snapshot.symbol.value)
 
     async def create_snapshot(self, symbol: Symbol) -> FundingOiSnapshot:
         try:
@@ -60,18 +60,16 @@ class OISnapshotService:
                 raise
             return snapshot
 
-        except Exception:
-            logger.exception("Failed to create OI snapshot", symbol=symbol.value)
-            raise
+        except Exception as exc:
+            log_and_raise(logger, exc, symbol=symbol.value)
 
     async def _pull_latest_funding_rate(self, symbol: Symbol) -> float:
         try:
             rows = await self._market_data_client.get_funding_rates(symbol, limit=1)
             rows.sort(key=lambda rate: rate.time)
             return float(rows[-1].rate)
-        except Exception:
-            logger.exception("Failed to fetch latest funding rate", symbol=symbol.value)
-            raise
+        except Exception as exc:
+            log_and_raise(logger, exc, symbol=symbol.value)
 
     async def _pull_latest_oi(self, symbol: Symbol, current_dt: datetime) -> tuple[OpenInterest, float | None]:
         try:
@@ -82,9 +80,8 @@ class OISnapshotService:
                 newest_oi=oi.open_interest,
             )
             return oi, oi_change
-        except Exception:
-            logger.exception("Failed to fetch latest open interest", symbol=symbol.value)
-            raise
+        except Exception as exc:
+            log_and_raise(logger, exc, symbol=symbol.value)
 
     async def _compute_oi_pct_change_7d(self, symbol: Symbol, as_of: datetime, newest_oi: float) -> float | None:
         filters = BaseQueryFilter(

@@ -33,16 +33,16 @@ def register_jobs(  # type: ignore[no-any-unimported]
 
 
 async def _run_daily(runner: RunDailyPositioningCheck) -> None:
-    try:
-        for symbol in Symbol:
+    for symbol in Symbol:
+        try:
             await runner.run(symbol)
-    except Exception:
-        logger.exception("Daily positioning check failed")
+        except Exception:
+            logger.exception("Daily positioning check failed", symbol=symbol.value)
 
 
 async def _run_weekly(runner: RunWeeklyFullAssessment) -> None:
-    try:
-        for symbol in Symbol:
+    for symbol in Symbol:
+        try:
             await runner.run(symbol)
-    except Exception:
-        logger.exception("Weekly full assessment failed")
+        except Exception:
+            logger.exception("Weekly full assessment failed", symbol=symbol.value)

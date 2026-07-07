@@ -4,6 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from source.application.services.health_monitor_service import HealthMonitorService
 from source.settings import MonitoringSettings
+from source.utils.error_logging import log_error
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -28,5 +29,5 @@ async def _run_cleanup(monitor_service: HealthMonitorService, settings: Monitori
     try:
         deleted = await monitor_service.cleanup_old_snapshots(settings.intervals.metrics_ttl_days)
         logger.info("Snapshot cleanup complete", deleted_rows=deleted)
-    except Exception:
-        logger.exception("Snapshot cleanup job failed")
+    except Exception as exc:
+        log_error(logger, exc)

@@ -1,10 +1,12 @@
 import structlog
+from apscheduler.jobstores.base import JobLookupError
 from apscheduler.triggers.interval import IntervalTrigger
 
 from source.application.services.auto_adjust_service import AutoAdjustService
 from source.application.services.health_monitor_service import HealthMonitorService
 from source.dependencies import get_auto_adjust_service, get_health_monitor_service, get_scheduler
 from source.domain.value_objects import Symbol
+from source.utils.error_logging import log_error
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -44,7 +46,7 @@ def unschedule_bot_monitoring(symbol: Symbol) -> None:
         try:
             scheduler.remove_job(job_id)
             logger.info("Removed per-bot job", job_id=job_id)
-        except Exception:
+        except JobLookupError:
             logger.debug("Job already removed or never existed", job_id=job_id)
 
 
@@ -54,8 +56,8 @@ async def _run_single_health_check(
 ) -> None:
     try:
         await monitor_service.check_single_bot_by_symbol(symbol)
-    except Exception:
-        logger.exception("Health check failed", symbol=symbol.value)
+    except Exception as exc:
+        log_error(logger, exc, symbol=symbol.value)
 
 
 async def _run_single_auto_adjust(
@@ -64,5 +66,5 @@ async def _run_single_auto_adjust(
 ) -> None:
     try:
         await auto_adjust_service.evaluate_one(symbol)
-    except Exception:
-        logger.exception("Auto-adjust failed", symbol=symbol.value)
+    except Exception as exc:
+        log_error(logger, exc, symbol=symbol.value)

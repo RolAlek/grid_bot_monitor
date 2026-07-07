@@ -18,6 +18,7 @@ class BaseHTTPClient:
         self._base_url = base_url
         self._timeout = timeout
         self._auth = auth or Auth()
+        self._client: AsyncClient = AsyncClient(base_url=base_url, timeout=timeout, auth=auth or Auth())
 
     async def get(
         self,
@@ -103,31 +104,30 @@ class BaseHTTPClient:
                 exclude_none=exclude_none,
             )
 
-        async with AsyncClient(base_url=self._base_url, timeout=self._timeout, auth=self._auth) as client:
-            request_url = str(client.build_request(method=method, url=path, params=params).url)
-            logger.info(
-                "HTTP request",
+        request_url = str(self._client.build_request(method=method, url=path, params=params).url)
+        logger.info(
+            "HTTP request",
+            method=method,
+            url=request_url,
+            params=params,
+            body=serialized_payload,
+        )
+        try:
+            response = await self._client.request(
                 method=method,
-                url=request_url,
+                url=path,
                 params=params,
-                body=serialized_payload,
+                headers=headers,
+                json=serialized_payload,
             )
-            try:
-                response = await client.request(
-                    method=method,
-                    url=path,
-                    params=params,
-                    headers=headers,
-                    json=serialized_payload,
-                )
-                response.raise_for_status()
-            except HTTPStatusError as exc:
-                raise http_error_factory(
-                    message=f"HTTP {exc.response.status_code}: {exc.response.text[:500]}",
-                    status_code=HTTPStatus(exc.response.status_code),
-                    response_content=exc.response.text,
-                    original_error=exc,
-                ) from exc
+            response.raise_for_status()
+        except HTTPStatusError as exc:
+            raise http_error_factory(
+                message=f"HTTP {exc.response.status_code}: {exc.response.text[:500]}",
+                status_code=HTTPStatus(exc.response.status_code),
+                response_content=exc.response.text,
+                original_error=exc,
+            ) from exc
 
         response_body = await response.aread()
         logger.info(

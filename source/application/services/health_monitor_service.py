@@ -1,4 +1,5 @@
 import asyncio
+import math
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from datetime import UTC, datetime
@@ -7,6 +8,7 @@ from uuid import UUID
 import structlog
 from httpx import ConnectError, NetworkError, RemoteProtocolError, TimeoutException
 
+from source.application.exceptions import InsufficientKlineDataError
 from source.application.ports import GridPort, MarketDataPort
 from source.application.services.alert_service import AlertService
 from source.application.services.health_classifier import HealthClassifier
@@ -27,7 +29,8 @@ from source.infrastructure.database.repositories.alchemy.health_snapshot_reposit
 )
 from source.infrastructure.database.repositories.base import AbstractRepository
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
-from source.infrastructure.exceptions import BaseInfrastructureError
+from source.infrastructure.exceptions import InfrastructureError
+from source.utils.error_logging import log_error
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -121,12 +124,19 @@ class HealthMonitorService:
 
         try:
             return await self._do_check_single_bot(bot, previous_status)
-        except (BaseInfrastructureError, ConnectError, TimeoutException, NetworkError, RemoteProtocolError) as exc:
-            logger.warning(
-                "Health check failed — infrastructure error",
+        except (
+            InfrastructureError,
+            InsufficientKlineDataError,
+            ConnectError,
+            TimeoutException,
+            NetworkError,
+            RemoteProtocolError,
+        ) as exc:
+            log_error(
+                logger,
+                exc,
+                level="warning",
                 symbol=bot.symbol.value,
-                error_type=type(exc).__name__,
-                error=str(exc),
             )
             return ClassificationResult(
                 status=previous_status,
@@ -204,6 +214,8 @@ class HealthMonitorService:
 
         if quote_investment:
             unrealized_pnl_pct = unrealized_pnl / quote_investment * 100
+            if math.isnan(unrealized_pnl_pct):
+                unrealized_pnl_pct = None
 
         else:
             logger.warning("quote_investment missing from response — PnL % unavailable", symbol=symbol.value)

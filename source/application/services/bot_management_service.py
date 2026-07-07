@@ -16,6 +16,8 @@ from source.domain.exceptions import BotIntegrityError, BotNotFoundError
 from source.domain.value_objects import GateStatus, GridLaunchStatus, Symbol
 from source.infrastructure.database.repositories.base import AbstractRepository
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
+from source.infrastructure.exceptions import HttpRequestError
+from source.utils.error_logging import log_error
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -75,7 +77,10 @@ class BotManagementService:
         if not bot.external_id:
             raise BotIntegrityError(f"Bot {symbol.value} has no external_id — cannot close via API")
 
-        await self._grid_port.cancel_futures_grid(bot.external_id, close_note=reason or None)
+        try:
+            await self._grid_port.cancel_futures_grid(bot.external_id, close_note=reason or None)
+        except HttpRequestError as exc:
+            log_error(logger, exc, level="warning", symbol=symbol.value, bot_oid=str(bot.oid))
 
         bot.status = GridLaunchStatus.CLOSED
         bot.closed_at = datetime.now(UTC)

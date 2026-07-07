@@ -1,6 +1,7 @@
 from source.domain.entities import GateRule, LiquidationEstimate
 from source.domain.value_objects import GateStatus, Symbol, Trend
 from source.settings import DecisionEngineSettings
+from source.utils.ensure import ensure
 
 
 STOP_LOSS_TOO_CLOSE = "Stop-loss {stop_loss:.2f} too close to price {price:.2f} (<{min_distance_pct:.1f}%)"
@@ -67,26 +68,29 @@ def build_liquidation_safety_checks(
             )
 
             if has_sl_tp and liq_down is not None:
+                stop_loss = ensure(proposal.stop_loss)
+                take_profit = ensure(proposal.take_profit)
+
                 rules.extend([
                     GateRule(
-                        triggered=proposal.stop_loss <= liq_down,  # type: ignore[operator]
+                        triggered=stop_loss <= liq_down,
                         status=GateStatus.FAIL,
-                        message=f"Stop-loss {proposal.stop_loss:.2f} at/below liquidation {liq_down:.2f}",
+                        message=f"Stop-loss {stop_loss:.2f} at/below liquidation {liq_down:.2f}",
                     ),
                     GateRule(
-                        triggered=(proposal.last_price - proposal.stop_loss) < min_distance,  # type: ignore[operator]
+                        triggered=(proposal.last_price - stop_loss) < min_distance,
                         status=GateStatus.CAUTION,
                         message=STOP_LOSS_TOO_CLOSE.format(
-                            stop_loss=proposal.stop_loss,
+                            stop_loss=stop_loss,
                             price=proposal.last_price,
                             min_distance_pct=min_distance_pct,
                         ),
                     ),
                     GateRule(
-                        triggered=proposal.take_profit < proposal.top,  # type: ignore[operator]
+                        triggered=take_profit < proposal.top,
                         status=GateStatus.CAUTION,
                         message=(
-                            f"Take-profit {proposal.take_profit:.2f} is below "
+                            f"Take-profit {take_profit:.2f} is below "
                             f"grid top {proposal.top:.2f} — may not capture full move"
                         ),
                     ),
@@ -111,26 +115,29 @@ def build_liquidation_safety_checks(
             )
 
             if has_sl_tp and liq_up is not None:
+                stop_loss = ensure(proposal.stop_loss)
+                take_profit = ensure(proposal.take_profit)
+
                 rules.extend([
                     GateRule(
-                        triggered=proposal.stop_loss >= liq_up,  # type: ignore[operator]
+                        triggered=stop_loss >= liq_up,
                         status=GateStatus.FAIL,
-                        message=f"Stop-loss {proposal.stop_loss:.2f} at/above liquidation {liq_up:.2f}",
+                        message=f"Stop-loss {stop_loss:.2f} at/above liquidation {liq_up:.2f}",
                     ),
                     GateRule(
-                        triggered=(proposal.stop_loss - proposal.last_price) < min_distance,  # type: ignore[operator]
+                        triggered=(stop_loss - proposal.last_price) < min_distance,
                         status=GateStatus.CAUTION,
                         message=STOP_LOSS_TOO_CLOSE.format(
-                            stop_loss=proposal.stop_loss,
+                            stop_loss=stop_loss,
                             price=proposal.last_price,
                             min_distance_pct=min_distance_pct,
                         ),
                     ),
                     GateRule(
-                        triggered=proposal.take_profit > proposal.bottom,  # type: ignore[operator]
+                        triggered=take_profit > proposal.bottom,
                         status=GateStatus.CAUTION,
                         message=(
-                            f"Take-profit {proposal.take_profit:.2f} is above "
+                            f"Take-profit {take_profit:.2f} is above "
                             f"grid bottom {proposal.bottom:.2f} — may not capture full move"
                         ),
                     ),
