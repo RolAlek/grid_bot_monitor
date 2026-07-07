@@ -62,6 +62,18 @@ def _drop_color_message(
     return event_dict
 
 
+def _promote_error_fields(
+    logger: WrappedLogger,  # noqa: ARG001
+    name: str,  # noqa: ARG001
+    event_dict: EventDict,
+) -> EventDict:
+    for key in ("error_code", "error_layer"):
+        if key in event_dict:
+            event_dict.setdefault(key, event_dict[key])
+
+    return event_dict
+
+
 def _pre_chain() -> list[Any]:
     return [
         structlog.contextvars.merge_contextvars,
@@ -75,6 +87,7 @@ def _pre_chain() -> list[Any]:
         ]),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
+        _promote_error_fields,
         _sanitize_sensitive,
         _drop_color_message,
     ]
