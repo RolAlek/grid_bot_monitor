@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import ConfigDict, Field, model_validator
 
+from source.domain.exceptions import InvalidGridParamsError
 from source.domain.value_objects import GridType, Trend
 from source.infrastructure.http.pionex.models.base import BaseSchema, CamelSchema, CateType, SLTPType, SuccessResponse
 from source.infrastructure.http.pionex.models.types import StringFloat
@@ -20,7 +21,7 @@ class DataObject(BaseSchema):
     @model_validator(mode="after")
     def validate_top_and_bottom(self) -> Self:
         if float(self.top) <= float(self.bottom):
-            raise ValueError("Top must be greater then bottom")
+            raise InvalidGridParamsError("Top must be greater than bottom")
         return self
 
 

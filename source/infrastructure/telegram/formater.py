@@ -1,4 +1,5 @@
 import html
+import math
 from types import MappingProxyType
 from typing import ClassVar
 
@@ -57,8 +58,8 @@ class TelegramMessageFormatter:
         result: GateResult,
         prev_status: GateStatus | None,
     ) -> str:
-        funding = result.raw_values["funding_rate_annualized_pct"]
-        oi_change = result.raw_values["oi_pct_change_7d"]
+        funding = result.raw_values.get("funding_rate_annualized_pct", 0.0)
+        oi_change = result.raw_values.get("oi_pct_change_7d")
 
         oi_text = f"{oi_change:.1f}%" if oi_change is not None else "insufficient history"
 
@@ -99,7 +100,10 @@ class TelegramMessageFormatter:
 
         lines = ["🤖 <b>Active Bots Overview</b>\n"]
         for bot in bots:
-            pnl_str = f"{bot.current_pnl_pct:+.1f}%" if bot.current_pnl_pct is not None else "—"
+            pnl_pct = bot.current_pnl_pct
+            if pnl_pct is not None and math.isnan(pnl_pct):
+                pnl_pct = None
+            pnl_str = f"{pnl_pct:+.1f}%" if pnl_pct is not None else "—"
             fill_str = f"{bot.grid_fill_ratio * 100:.0f}%" if bot.grid_fill_ratio is not None else "—"
             liq_str = f"{bot.distance_to_liquidation_pct:.1f}%" if bot.distance_to_liquidation_pct is not None else "—"
             paused = " ⏸️" if bot.paused_by_monitor else ""

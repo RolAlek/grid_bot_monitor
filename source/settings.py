@@ -48,6 +48,14 @@ class PionexSettings(_BaseSettings):
     kline_interval: str = "4H"
     limit: int = 500
 
+    @field_validator("api_key", "api_secret", mode="after")
+    @classmethod
+    def validate_not_empty(cls, value: SecretStr) -> SecretStr:
+        if not value.get_secret_value().strip():
+            raise ValueError("API key and secret must not be empty")
+
+        return value
+
     @property
     def connection_url(self) -> str:
         return self.base_url.encoded_string()

@@ -23,44 +23,23 @@ class InfrastructureError(AppError):
 
 
 class HttpSerializationError(InfrastructureError):
-    def __init__(
-        self,
-        message: str,
-        model_name: str | None = None,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(
-            message,
-            error_code=ErrorCode.ERR_INFRA_HTTP_SERIALIZATION,
-            **kwargs,
-        )
+    def __init__(self, message: str, model_name: str | None = None, **kwargs: Any) -> None:
+        super().__init__(message, error_code=ErrorCode.ERR_INFRA_HTTP_SERIALIZATION, **kwargs)
         self.model_name = model_name
 
 
 class HttpRequestError(InfrastructureError):
     def __init__(
-        self,
-        message: str,
-        status_code: int | None = None,
-        response_content: Any = None,
-        **kwargs: Any,
+        self, message: str, status_code: int | None = None, response_content: Any = None, **kwargs: Any
     ) -> None:
-        super().__init__(
-            message,
-            error_code=kwargs.pop("error_code", ErrorCode.ERR_INFRA_HTTP_REQUEST),
-            **kwargs,
-        )
+        super().__init__(message, error_code=kwargs.pop("error_code", ErrorCode.ERR_INFRA_HTTP_REQUEST), **kwargs)
         self.status_code = status_code
         self.response_content = response_content
 
 
 class RetryableHttpError(HttpRequestError):
     def __init__(
-        self,
-        message: str,
-        status_code: int | None = None,
-        response_content: Any = None,
-        **kwargs: Any,
+        self, message: str, status_code: int | None = None, response_content: Any = None, **kwargs: Any
     ) -> None:
         super().__init__(
             message,
@@ -90,11 +69,7 @@ class RateLimitError(RetryableHttpError):
 
 class NonRetryableHttpError(HttpRequestError):
     def __init__(
-        self,
-        message: str,
-        status_code: int | None = None,
-        response_content: Any = None,
-        **kwargs: Any,
+        self, message: str, status_code: int | None = None, response_content: Any = None, **kwargs: Any
     ) -> None:
         super().__init__(
             message,
@@ -123,42 +98,18 @@ class HttpValidationError(NonRetryableHttpError):
 
 
 class DatabaseError(InfrastructureError):
-    def __init__(
-        self,
-        message: str = "Database error",
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(
-            message,
-            error_code=ErrorCode.ERR_INFRA_DB_ERROR,
-            **kwargs,
-        )
+    def __init__(self, message: str = "Database error", **kwargs: Any) -> None:
+        super().__init__(message, error_code=ErrorCode.ERR_INFRA_DB_ERROR, **kwargs)
 
 
 class RepositoryError(InfrastructureError):
-    def __init__(
-        self,
-        message: str = "Repository operation failed",
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(
-            message,
-            error_code=ErrorCode.ERR_INFRA_REPOSITORY,
-            **kwargs,
-        )
+    def __init__(self, message: str = "Repository operation failed", **kwargs: Any) -> None:
+        super().__init__(message, error_code=ErrorCode.ERR_INFRA_REPOSITORY, **kwargs)
 
 
 class UnsupportedFilterOperatorError(InfrastructureError):
-    def __init__(
-        self,
-        message: str = "Unsupported filter operator",
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(
-            message,
-            error_code=ErrorCode.ERR_INFRA_UNSUPPORTED_FILTER,
-            **kwargs,
-        )
+    def __init__(self, message: str = "Unsupported filter operator", **kwargs: Any) -> None:
+        super().__init__(message, error_code=ErrorCode.ERR_INFRA_UNSUPPORTED_FILTER, **kwargs)
 
 
 def http_error_factory(
