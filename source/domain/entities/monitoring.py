@@ -4,6 +4,7 @@ from typing import Any, Self
 from uuid import UUID
 
 from source.domain.entities.indicators import IndicatorSet
+from source.domain.exceptions import BotIntegrityError
 from source.domain.value_objects import AlertType, GridLaunchStatus, GridType, HealthStatus, Symbol, Trend
 
 
@@ -125,7 +126,8 @@ class HealthSnapshot(HealthMetricsInput):
         classified: "ClassificationResult",
     ) -> "HealthSnapshot":
         if bot.oid is None:
-            raise ValueError("Bot must have oid to create HealthSnapshot")
+            raise BotIntegrityError("Bot must have oid to create HealthSnapshot")
+
         return cls(
             grid_launch_oid=bot.oid,
             symbol=bot.symbol,

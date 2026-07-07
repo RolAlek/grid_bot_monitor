@@ -11,7 +11,9 @@ from source.domain.exceptions import BotNotFoundError
 from source.domain.value_objects import ActionType, HealthStatus, Symbol
 from source.infrastructure.database.repositories.base import AbstractRepository
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
+from source.infrastructure.exceptions import InfrastructureError
 from source.settings import MonitoringSettings
+from source.utils.error_logging import log_error
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -68,13 +70,17 @@ class AutoAdjustService:
             logger.debug("Auto-adjust skipped — bot not found", symbol=symbol.value)
             return ActionType.NONE
 
-        return await self.evaluate_and_act(bot)
+        try:
+            return await self.evaluate_and_act(bot)
+        except InfrastructureError as exc:
+            log_error(logger, exc, level="error", symbol=symbol.value)
+            return ActionType.NONE
 
     async def _handle_red(self, bot: Bot) -> ActionType:
         try:
             await self._bot_management.pause_bot(bot.symbol)
-        except BotNotFoundError:
-            logger.warning("Auto-pause skipped — bot not found (may have been closed)", symbol=bot.symbol.value)
+        except BotNotFoundError as exc:
+            log_error(logger, exc, level="warning", symbol=bot.symbol.value)
             return ActionType.NONE
 
         await self._notifier.send_health_alert(

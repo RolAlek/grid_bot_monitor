@@ -4,6 +4,7 @@ from typing import ClassVar
 
 import structlog
 
+from source.application.exceptions import ClassifierMisconfigurationError
 from source.domain.entities.monitoring import ClassificationResult, HealthMetricsInput
 from source.domain.value_objects import AlertType, HealthStatus, Symbol
 from source.settings import MonitoringSettings
@@ -140,7 +141,7 @@ class HealthClassifier:
                     green_min=green_min,
                     yellow_min=yellow_min,
                 )
-                raise ValueError("green_min and yellow_min required for higher_better")
+                raise ClassifierMisconfigurationError("green_min and yellow_min required for higher_better")
 
             if value >= green_min:
                 return HealthStatus.GREEN, 1.0
@@ -173,7 +174,7 @@ class HealthClassifier:
                 green_max=green_max,
                 yellow_max=yellow_max,
             )
-            raise ValueError("green_max and yellow_max required for lower_better")
+            raise ClassifierMisconfigurationError("green_max and yellow_max required for lower_better")
 
         if value <= green_max:
             return HealthStatus.GREEN, 1.0
@@ -201,11 +202,8 @@ class HealthClassifier:
                 score=round(score, 4),
             )
         else:
-            score = 0.0
-            logger.error(
-                "Classifier: yellow_max is zero — cannot compute RED score, defaulting to 0",
-                value=value,
-            )
+            raise ClassifierMisconfigurationError("yellow_max must be > 0 for lower_better metrics")
+
         return HealthStatus.RED, score
 
     @staticmethod

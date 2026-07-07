@@ -13,6 +13,7 @@ from source.application.ports import MarketDataPort
 from source.domain.entities import Candle, IndicatorSet
 from source.domain.value_objects import Symbol
 from source.settings import PionexSettings
+from source.utils.error_logging import log_and_raise
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -70,6 +71,9 @@ class IndicatorService:
 
         last_price = float(dataframe["close"].iloc[-1])
 
+        if last_price <= 0:
+            raise InsufficientKlineDataError(f"Invalid last_price={last_price} for {symbol.value}")
+
         result = IndicatorSet(
             interval=interval,
             as_of=dataframe["time"].iloc[-1],
@@ -98,9 +102,8 @@ class IndicatorService:
                 interval=self._settings.kline_interval,
                 limit=self._settings.limit,
             )
-        except Exception:
-            logger.exception("Failed to fetch market data", symbol=symbol.value)
-            raise
+        except Exception as exc:
+            log_and_raise(logger, exc, symbol=symbol.value)
 
     @staticmethod
     def _convert_to_dataframe(klines: list[Candle]) -> pd.DataFrame:

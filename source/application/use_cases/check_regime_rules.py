@@ -1,3 +1,4 @@
+from source.application.exceptions import InsufficientKlineDataError
 from source.domain.entities import GateRule, IndicatorSet, ProposedGridParams
 from source.domain.value_objects import GateStatus
 from source.settings import DecisionEngineSettings
@@ -9,6 +10,10 @@ def build_market_regime_checks(
     settings: DecisionEngineSettings,
 ) -> list[GateRule]:
     grid_range = proposal.top - proposal.bottom
+
+    if indicators.atr14 <= 0:
+        raise InsufficientKlineDataError("ATR14 must be positive")
+
     min_range = settings.atr_range_multiplier_min * indicators.atr14
 
     return [

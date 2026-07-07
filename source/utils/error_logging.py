@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, NoReturn
 
 import structlog
 
@@ -30,6 +30,6 @@ def log_and_raise(
     *,
     level: str = "error",
     **context: Any,
-) -> None:
+) -> NoReturn:
     log_error(logger, error, level=level, **context)
     raise error
