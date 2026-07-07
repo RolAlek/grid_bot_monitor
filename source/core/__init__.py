@@ -1,4 +1,4 @@
-from source.core.exceptions import AppError
+from source.core.exceptions import AppError, ErrorCode
 
 
-__all__ = ["AppError"]
+__all__ = ["AppError", "ErrorCode"]

@@ -1,6 +1,6 @@
 from typing import Any
 
-from source.core.exceptions import AppError
+from source.core.exceptions import AppError, ErrorCode
 
 
 class DomainError(AppError):
@@ -8,15 +8,13 @@ class DomainError(AppError):
         self,
         message: str,
         *,
-        error_code: str | None = None,
-        user_message: str | None = None,
+        error_code: ErrorCode | str | None = None,
         detail: dict[str, Any] | None = None,
         original_error: Exception | None = None,
     ) -> None:
         super().__init__(
             message,
-            error_code=error_code or "ERR_DOMAIN_UNKNOWN",
-            user_message=user_message or "Internal domain layer error",
+            error_code=error_code or ErrorCode.ERR_DOMAIN_UNKNOWN,
             detail=detail,
             original_error=original_error,
         )
@@ -30,8 +28,7 @@ class CandleDataUnavailableError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_CANDLE_DATA_UNAVAILABLE",
-            user_message="Failed to retrieve candlestick data from the exchange",
+            error_code=ErrorCode.ERR_DOMAIN_CANDLE_DATA_UNAVAILABLE,
             **kwargs,
         )
 
@@ -44,8 +41,7 @@ class LiquidationEstimateDataUnavailableError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_LIQ_ESTIMATE_UNAVAILABLE",
-            user_message="Unable to obtain liquidation estimate from exchange",
+            error_code=ErrorCode.ERR_DOMAIN_LIQ_ESTIMATE_UNAVAILABLE,
             **kwargs,
         )
 
@@ -58,8 +54,7 @@ class FundingRateDataUnavailableError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_FUNDING_RATE_UNAVAILABLE",
-            user_message="Unable to retrieve funding rate data",
+            error_code=ErrorCode.ERR_DOMAIN_FUNDING_RATE_UNAVAILABLE,
             **kwargs,
         )
 
@@ -72,8 +67,7 @@ class OpenInterestDataUnavailableError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_OI_DATA_UNAVAILABLE",
-            user_message="Unable to retrieve open interest data",
+            error_code=ErrorCode.ERR_DOMAIN_OI_DATA_UNAVAILABLE,
             **kwargs,
         )
 
@@ -86,8 +80,7 @@ class GridOrderDataUnavailableError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_GRID_ORDER_UNAVAILABLE",
-            user_message="Failed to retrieve grid order status data",
+            error_code=ErrorCode.ERR_DOMAIN_GRID_ORDER_UNAVAILABLE,
             **kwargs,
         )
 
@@ -100,8 +93,7 @@ class InvalidGridParamsError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_INVALID_GRID_PARAMS",
-            user_message="Incorrect grid parameters",
+            error_code=ErrorCode.ERR_DOMAIN_INVALID_GRID_PARAMS,
             **kwargs,
         )
 
@@ -114,8 +106,7 @@ class InvalidSymbolFormatError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_INVALID_SYMBOL_FORMAT",
-            user_message="Incorrect market symbol format",
+            error_code=ErrorCode.ERR_DOMAIN_INVALID_SYMBOL_FORMAT,
             **kwargs,
         )
 
@@ -128,8 +119,7 @@ class DecisionNotFoundError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_DECISION_NOT_FOUND",
-            user_message="Decision verdict not found",
+            error_code=ErrorCode.ERR_DOMAIN_DECISION_NOT_FOUND,
             **kwargs,
         )
 
@@ -142,8 +132,7 @@ class DuplicateOISnapshotError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_DUPLICATE_OI_SNAPSHOT",
-            user_message="A snapshot of open interest for this date already exists",
+            error_code=ErrorCode.ERR_DOMAIN_DUPLICATE_OI_SNAPSHOT,
             **kwargs,
         )
 
@@ -156,8 +145,7 @@ class OISnapshotPersistenceError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_OI_SNAPSHOT_PERSIST",
-            user_message="Error saving snapshot of open interest",
+            error_code=ErrorCode.ERR_DOMAIN_OI_SNAPSHOT_PERSIST,
             **kwargs,
         )
 
@@ -170,8 +158,7 @@ class BotIntegrityError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_BOT_INTEGRITY",
-            user_message="Inconsistency in mesh bot data detected",
+            error_code=ErrorCode.ERR_DOMAIN_BOT_INTEGRITY,
             **kwargs,
         )
 
@@ -184,8 +171,7 @@ class BotNotFoundError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_BOT_NOT_FOUND",
-            user_message="The bot wasn't found. It may have been closed or not yet running",
+            error_code=ErrorCode.ERR_DOMAIN_BOT_NOT_FOUND,
             **kwargs,
         )
 
@@ -198,8 +184,7 @@ class InvalidHealthMetricError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_INVALID_HEALTH_METRIC",
-            user_message="Incorrect value of the bot health metric",
+            error_code=ErrorCode.ERR_DOMAIN_INVALID_HEALTH_METRIC,
             **kwargs,
         )
 
@@ -212,7 +197,6 @@ class InvalidSymbolError(DomainError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_DOMAIN_INVALID_SYMBOL",
-            user_message="Unknown trading symbol. Use for example BTC_USDT_REPR",
+            error_code=ErrorCode.ERR_DOMAIN_INVALID_SYMBOL,
             **kwargs,
         )

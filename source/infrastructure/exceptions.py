@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from http import HTTPStatus
 from typing import Any
 
-from source.core.exceptions import AppError
+from source.core.exceptions import AppError, ErrorCode
 
 
 class InfrastructureError(AppError):
@@ -10,15 +10,13 @@ class InfrastructureError(AppError):
         self,
         message: str,
         *,
-        error_code: str | None = None,
-        user_message: str | None = None,
+        error_code: ErrorCode | str | None = None,
         detail: dict[str, Any] | None = None,
         original_error: Exception | None = None,
     ) -> None:
         super().__init__(
             message,
-            error_code=error_code or "ERR_INFRA_UNKNOWN",
-            user_message=user_message or "Internal infrastructure error",
+            error_code=error_code or ErrorCode.ERR_INFRA_UNKNOWN,
             detail=detail,
             original_error=original_error,
         )
@@ -33,8 +31,7 @@ class HttpSerializationError(InfrastructureError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_INFRA_HTTP_SERIALIZATION",
-            user_message="Error preparing request to external API",
+            error_code=ErrorCode.ERR_INFRA_HTTP_SERIALIZATION,
             **kwargs,
         )
         self.model_name = model_name
@@ -50,11 +47,7 @@ class HttpRequestError(InfrastructureError):
     ) -> None:
         super().__init__(
             message,
-            error_code=kwargs.pop("error_code", "ERR_INFRA_HTTP_REQUEST"),
-            user_message=kwargs.pop(
-                "user_message",
-                "There was an error accessing the external API. Please try again later",
-            ),
+            error_code=kwargs.pop("error_code", ErrorCode.ERR_INFRA_HTTP_REQUEST),
             **kwargs,
         )
         self.status_code = status_code
@@ -73,7 +66,7 @@ class RetryableHttpError(HttpRequestError):
             message,
             status_code=status_code,
             response_content=response_content,
-            error_code=kwargs.pop("error_code", "ERR_INFRA_HTTP_RETRYABLE"),
+            error_code=kwargs.pop("error_code", ErrorCode.ERR_INFRA_HTTP_RETRYABLE),
             **kwargs,
         )
 
@@ -90,8 +83,7 @@ class RateLimitError(RetryableHttpError):
             message,
             status_code=status_code,
             response_content=response_content,
-            error_code=kwargs.pop("error_code", "ERR_INFRA_HTTP_429"),
-            user_message=kwargs.pop("user_message", "Too many requests to external API. Wait please."),
+            error_code=kwargs.pop("error_code", ErrorCode.ERR_INFRA_HTTP_429),
             **kwargs,
         )
 
@@ -108,7 +100,7 @@ class NonRetryableHttpError(HttpRequestError):
             message,
             status_code=status_code,
             response_content=response_content,
-            error_code=kwargs.pop("error_code", "ERR_INFRA_HTTP_NONRETRYABLE"),
+            error_code=kwargs.pop("error_code", ErrorCode.ERR_INFRA_HTTP_NONRETRYABLE),
             **kwargs,
         )
 
@@ -123,8 +115,7 @@ class HttpValidationError(NonRetryableHttpError):
     ) -> None:
         super().__init__(
             message,
-            error_code=kwargs.pop("error_code", "ERR_INFRA_HTTP_VALIDATION"),
-            user_message=kwargs.pop("user_message", "Unexpected response format from an external API"),
+            error_code=kwargs.pop("error_code", ErrorCode.ERR_INFRA_HTTP_VALIDATION),
             **kwargs,
         )
         self.model_name = model_name
@@ -139,8 +130,7 @@ class DatabaseError(InfrastructureError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_INFRA_DB_ERROR",
-            user_message="A storage-level error occurred",
+            error_code=ErrorCode.ERR_INFRA_DB_ERROR,
             **kwargs,
         )
 
@@ -153,8 +143,7 @@ class RepositoryError(InfrastructureError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_INFRA_REPOSITORY",
-            user_message="Error processing data. Try again later",
+            error_code=ErrorCode.ERR_INFRA_REPOSITORY,
             **kwargs,
         )
 
@@ -167,8 +156,7 @@ class UnsupportedFilterOperatorError(InfrastructureError):
     ) -> None:
         super().__init__(
             message,
-            error_code="ERR_INFRA_UNSUPPORTED_FILTER",
-            user_message="Internal error constructing query",
+            error_code=ErrorCode.ERR_INFRA_UNSUPPORTED_FILTER,
             **kwargs,
         )
 
@@ -187,7 +175,7 @@ def http_error_factory(
                 status_code=status_code,
                 response_content=response_content,
                 original_error=original_error,
-                error_code="ERR_INFRA_HTTP_5XX",
+                error_code=ErrorCode.ERR_INFRA_HTTP_5XX,
             )
         if code == HTTPStatus.TOO_MANY_REQUESTS:
             return RateLimitError(
@@ -200,6 +188,6 @@ def http_error_factory(
         message=message,
         status_code=status_code,
         response_content=response_content,
-        error_code="ERR_INFRA_HTTP_4XX",
+        error_code=ErrorCode.ERR_INFRA_HTTP_4XX,
         original_error=original_error,
     )
