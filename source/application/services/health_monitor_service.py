@@ -27,7 +27,7 @@ from source.infrastructure.database.repositories.alchemy.health_snapshot_reposit
 )
 from source.infrastructure.database.repositories.base import AbstractRepository
 from source.infrastructure.database.repositories.filters import BaseFieldCondition, BaseQueryFilter, Operator
-from source.infrastructure.exceptions import BaseInfrastructureError
+from source.infrastructure.exceptions import InfrastructureError
 
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -121,7 +121,7 @@ class HealthMonitorService:
 
         try:
             return await self._do_check_single_bot(bot, previous_status)
-        except (BaseInfrastructureError, ConnectError, TimeoutException, NetworkError, RemoteProtocolError) as exc:
+        except (InfrastructureError, ConnectError, TimeoutException, NetworkError, RemoteProtocolError) as exc:
             logger.warning(
                 "Health check failed — infrastructure error",
                 symbol=bot.symbol.value,
