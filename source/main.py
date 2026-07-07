@@ -18,6 +18,7 @@ from source.presentation.bot.handlers.common_handlers import common_router
 from source.presentation.bot.handlers.decision_handlers import decision_router
 from source.presentation.bot.handlers.launch_grid_handlers import grid_router
 from source.presentation.bot.handlers.monitor_handlers import monitor_router
+from source.presentation.bot.middleware.error_middleware import ErrorMiddleware
 from source.presentation.scheduler.jobs import register_jobs
 from source.presentation.scheduler.jobs.lifecycle import schedule_bot_monitoring, unschedule_bot_monitoring
 from source.presentation.scheduler.jobs.monitor import register_cleanup_job
@@ -34,6 +35,7 @@ async def main() -> None:
 
     bot: TelegramBot = get_telegram_bot()
     dp = Dispatcher()
+    dp.update.middleware.register(ErrorMiddleware())
     dp.include_router(common_router())
     dp.include_router(
         decision_router(
