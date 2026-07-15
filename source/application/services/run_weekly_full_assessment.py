@@ -57,10 +57,11 @@ class RunWeeklyFullAssessment:
         )
 
         logger.info("Verdict resolved", action=verdict.action.value)
-        verdict = await self._decision_service.persist_verdict(verdict)
-        await self._notifier.send_digest(verdict)
+        persisted = await self._decision_service.persist_verdict(verdict)
 
-        return verdict
+        await self._notifier.send_digest(persisted)
+
+        return persisted
 
     def _resolve(
         self,
