@@ -111,7 +111,7 @@ class OISnapshotService:
     async def get_last_snapshot(self, symbol: Symbol) -> FundingOiSnapshot | None:
         filters = BaseQueryFilter(
             conditions=(BaseFieldCondition(field="symbol", operator=Operator.EQUALS, value=symbol.value),),
-            order_by=("created_at",),
+            order_by=("-created_at",),
         )
         async with self._provider_oi_snapshot_repository() as repository:
             return await repository.get_one(filters)

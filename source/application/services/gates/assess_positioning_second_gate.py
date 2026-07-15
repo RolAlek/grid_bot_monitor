@@ -5,6 +5,7 @@ from source.application.services.oi_snapshot_service import OISnapshotService
 from source.application.use_cases.check_positioning_rules import build_positioning_checks
 from source.application.utils import evaluate_checks
 from source.domain.entities import GateResult
+from source.domain.exceptions import DuplicateOISnapshotError
 from source.domain.value_objects import Gate, GateStatus, Symbol
 from source.settings import DecisionEngineSettings
 
@@ -26,19 +27,21 @@ class AssessPositioningService:
     async def execute(self, symbol: Symbol) -> GateResult:
         logger.info("Start assessing positioning for %s", symbol.value)
 
-        snapshot = await self._oi_service.create_snapshot(symbol)
-        if snapshot is None:
-            logger.warning("No OI snapshot available for %s — returning CAUTION", symbol.value)
-            return GateResult(
-                gate=Gate.POSITIONING,
-                status=GateStatus.CAUTION,
-                reasons=("Insufficient OI history — less than 7 days of stored data",),
-                raw_values={},
-            )
+        try:
+            snapshot = await self._oi_service.create_snapshot(symbol)
+        except DuplicateOISnapshotError:
+            snapshot = await self._oi_service.get_last_snapshot(symbol)
+            if snapshot is None:
+                logger.warning("No OI snapshot available for %s — returning CAUTION", symbol.value)
+                return GateResult(
+                    gate=Gate.POSITIONING,
+                    status=GateStatus.CAUTION,
+                    reasons=("Insufficient OI history — less than 7 days of stored data",),
+                    raw_values={},
+                )
+
         checks = build_positioning_checks(snapshot, self._settings)
         statuses, reasons = evaluate_checks(checks)
-
-        await self._oi_service.persist_oi_snapshot(snapshot)
 
         return GateResult(
             gate=Gate.POSITIONING,
