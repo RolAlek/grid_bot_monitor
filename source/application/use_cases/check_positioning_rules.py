@@ -1,3 +1,4 @@
+from source.constants import INSUFFICIENT_OI_HISTORY_REASON
 from source.domain.entities import FundingOiSnapshot, GateRule
 from source.domain.value_objects import GateStatus, Trend
 from source.settings import DecisionEngineSettings
@@ -7,6 +8,15 @@ def build_positioning_checks(
     snapshot: FundingOiSnapshot,
     settings: DecisionEngineSettings,
 ) -> list[GateRule]:
+    if snapshot is None:
+        return [
+            GateRule(
+                triggered=True,
+                status=GateStatus.CAUTION,
+                message=INSUFFICIENT_OI_HISTORY_REASON,
+            )
+        ]
+
     funding = snapshot.funding_rate_annualized_pct
     oi_change = snapshot.oi_pct_change_7d
 
@@ -26,7 +36,7 @@ def build_positioning_checks(
         GateRule(
             triggered=oi_change is None,
             status=GateStatus.CAUTION,
-            message="Insufficient OI history — less than 7 days of stored data",
+            message=INSUFFICIENT_OI_HISTORY_REASON,
         ),
     ]
 

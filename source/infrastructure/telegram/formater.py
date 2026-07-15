@@ -48,7 +48,15 @@ class TelegramMessageFormatter:
 
         sections.append(self._aggregate_gate_lines(verdict.gates))
 
-        if verdict.action == VerdictAction.LAUNCH and verdict.suggested_parameters:
+        if verdict.is_launchable_despite_review:
+            sections.append(
+                "💡 <i>Only concern is insufficient OI history (data gap, not a risk signal) — "
+                "you may still launch the bot.</i>"
+            )
+
+        if (
+            verdict.action == VerdictAction.LAUNCH or verdict.is_launchable_despite_review
+        ) and verdict.suggested_parameters:
             sections.append(self._aggregate_launch_parameters(verdict.suggested_parameters))
 
         return "\n\n".join(sections)
@@ -83,16 +91,38 @@ class TelegramMessageFormatter:
         return "\n".join(gate_lines)
 
     def _aggregate_launch_parameters(self, parameters: ProposedGridParams) -> str:
+        top = self._fmt_price(parameters.top)
+        bottom = self._fmt_price(parameters.bottom)
+        sl = self._fmt_price(parameters.stop_loss) if parameters.stop_loss else "Not specified"
+        tp = self._fmt_price(parameters.take_profit) if parameters.take_profit else "Not specified"
+
         return (
             f"🛠 <b>Launch parameters</b>:\n"
-            f"  📐 <b>Range:</b> {parameters.top:,.0f} - {parameters.bottom:,.0f}\n"
+            f"  📐 <b>Range:</b> {top} - {bottom}\n"
             f"  🔢 <b>Number of grids:</b> {parameters.grid_levels}\n"
             f"  📈 <b>Trend regime:</b> {parameters.trend.value}\n"
             f"  ⚙️ <b>Grid mode:</b> {parameters.grid_type.value}\n"
             f"  ⚡️ <b>Leverage:</b> {parameters.leverage}x\n"
-            f"  ⛔️ <b>Stop-loss</b> {parameters.stop_loss or 'Not specified'}\n"
-            f"  💰 <b>Take-profit</b> {parameters.take_profit or 'Not specified'}\n"
+            f"  ⛔️ <b>Stop-loss</b> {sl}\n"
+            f"  💰 <b>Take-profit</b> {tp}\n"
         )
+
+    # Price thresholds for adaptive decimal formatting
+    _PRICE_LARGE = 100.0
+    _PRICE_MEDIUM = 1.0
+
+    @staticmethod
+    def _fmt_price(value: float) -> str:
+        """Format price with appropriate decimal places.
+
+        Returns:
+            Formatted string: >=100 uses 0dp, >=1 uses 2dp, <1 uses 4dp.
+        """
+        if value >= TelegramMessageFormatter._PRICE_LARGE:
+            return f"{value:,.0f}"
+        if value >= TelegramMessageFormatter._PRICE_MEDIUM:
+            return f"{value:,.2f}"
+        return f"{value:,.4f}"
 
     def format_status_all(self, bots: list[Bot]) -> str:
         if not bots:

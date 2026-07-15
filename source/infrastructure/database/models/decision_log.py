@@ -26,5 +26,6 @@ class DecisionLog(Base):
     action: Mapped[str] = mapped_column(String(32))
     gates_json: Mapped[tuple[dict[str, Any]]] = mapped_column(JSONB)
     notes: Mapped[str | None]
+    suggested_parameters_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     launched_grid: Mapped["GridLaunchModel | None"] = relationship(back_populates="decision_verdict", lazy="joined")

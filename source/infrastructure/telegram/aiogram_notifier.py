@@ -29,7 +29,10 @@ class AiogramNotifier(Notifier):
         await self._send_message(text=self._formatter.format_alert(result, prev_status), chat_id=self._chat_id)
 
     async def send_digest(self, verdict: DecisionVerdict) -> None:
-        kb = build_verdict_reaction_kb(str(ensure(verdict.oid))) if verdict.action == VerdictAction.LAUNCH else None
+        kb: InlineKeyboardMarkup | None = None
+        if (verdict.action == VerdictAction.LAUNCH or verdict.is_launchable_despite_review) and verdict.oid:
+            kb = build_verdict_reaction_kb(str(ensure(verdict.oid)))
+
         await self._send_message(text=self._formatter.format_digest(verdict), chat_id=self._chat_id, keyboard=kb)
 
     async def send_health_alert(
