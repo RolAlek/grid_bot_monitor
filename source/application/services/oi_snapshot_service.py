@@ -41,27 +41,20 @@ class OISnapshotService:
             funding_rate = await self._pull_latest_funding_rate(symbol)
             open_interest, oi_change = await self._pull_latest_oi(symbol, current_dt)
 
-            return await self.persist_oi_snapshot(
-                FundingOiSnapshot(
-                    symbol=symbol,
-                    created_at=current_dt,
-                    funding_rate_last=funding_rate,
-                    open_interest=open_interest.open_interest,
-                    oi_pct_change_7d=oi_change,
-                )
+            snapshot = FundingOiSnapshot(
+                symbol=symbol,
+                created_at=current_dt,
+                funding_rate_last=funding_rate,
+                open_interest=open_interest.open_interest,
+                oi_pct_change_7d=oi_change,
             )
-        except DuplicateOISnapshotError:
-            snapshot = await self.get_last_snapshot(symbol)
-            if snapshot is None:
-                logger.exception(
-                    "Duplicate OI snapshot error occurred, but no last snapshot found",
-                    symbol=symbol.value,
-                )
-                raise
-            return snapshot
-
         except Exception as exc:
             log_and_raise(logger, exc, symbol=symbol.value)
+
+        try:
+            return await self.persist_oi_snapshot(snapshot)
+        except DuplicateOISnapshotError:
+            return snapshot
 
     async def _pull_latest_funding_rate(self, symbol: Symbol) -> float:
         try:
